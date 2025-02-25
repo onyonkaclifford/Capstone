@@ -7,4 +7,4 @@ EXPOSE 8000
 COPY . .
 RUN pip install -r requirements.txt
 
-CMD ["chainlit", "run", "app.py", "-h", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["chainlit", "run", "./src/app.py", "--host", "0.0.0.0", "--port", "8000", "-h"]
