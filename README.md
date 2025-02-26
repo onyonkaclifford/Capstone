@@ -10,4 +10,4 @@ with development (the `.env` file is not checked into Git because it contains se
 ## Deployment
 
 1. Build image: `docker build -t capstone .`
-2. Run: `docker run -dp 0.0.0.0:8000:8000 capstone`
+2. Run: `docker run -dp 0.0.0.0:8000:8000 --env-file .env capstone`
