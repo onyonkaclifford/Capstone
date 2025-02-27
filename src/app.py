@@ -46,6 +46,7 @@ async def on_start():
 @cl.on_message
 async def on_message(message: cl.Message):
     images = []
+    images_mimes = []
 
     if message.elements:
         for i in message.elements:
@@ -53,6 +54,7 @@ async def on_message(message: cl.Message):
                 img = utils.get_resized_image(Image.open(i.path), IMAGE_MAX_WIDTH)
                 img_ext = utils.get_image_extension(i.name)
                 images.append(utils.get_base64_encoded_image(img, img_ext))
+                images_mimes.append(f"image/{'jpeg' if img_ext == 'jpg' else img_ext}")
 
-    result = agent.handle_message(message.content, images)
+    result = agent.handle_message(message.content, images, images_mimes)
     await cl.Message(result).send()
