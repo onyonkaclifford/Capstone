@@ -1,6 +1,3 @@
-import base64
-import mimetypes
-from io import BytesIO
 import logging
 import os
 
@@ -8,6 +5,7 @@ import chainlit as cl
 from dotenv import load_dotenv
 from PIL import Image
 
+import utils
 from agent import Agent
 
 
@@ -16,7 +14,7 @@ load_dotenv()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 TEMPERATURE = float(os.getenv("TEMPERATURE"))
 MAX_TOKENS=int(os.getenv("MAX_TOKENS"))
-IMAGE_RESIZE_WIDTH=int(os.getenv("IMAGE_RESIZE_WIDTH"))
+IMAGE_MAX_WIDTH=int(os.getenv("IMAGE_MAX_WIDTH"))
 VERBOSE = os.getenv("VERBOSE").lower()
 
 logger = logging.getLogger("capstone")
@@ -51,15 +49,10 @@ async def on_message(message: cl.Message):
 
     if message.elements:
         for i in message.elements:
-            if i.type == "file" and i.mime.startswith("image/"):
-                img = Image.open(BytesIO(i.content))
-                img_ext = mimetypes.guess_extension(i.mime)[1:].upper()
-                img_w, img_h = img.size()
-                resize_factor = IMAGE_RESIZE_WIDTH / img_w
-                img = img.resize((IMAGE_RESIZE_WIDTH, int(img_h * resize_factor)))
-                buffer = BytesIO()
-                img.save(buffer, img_ext)
-                images.append(base64.b64decode(buffer.getvalue()).decode("UTF-8"))
+            if i.type == "image":
+                img = utils.get_resized_image(Image.open(i.path), IMAGE_MAX_WIDTH)
+                img_ext = utils.get_image_extension(i.name)
+                images.append(utils.get_base64_encoded_image(img, img_ext))
 
     result = agent.handle_message(message.content, images)
     await cl.Message(result).send()

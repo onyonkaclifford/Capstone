@@ -36,9 +36,10 @@ class Agent:
         ])
 
     def handle_message(self, message_text, base64_images):
-        result = self._agent_executor.invoke({"input": message_text, "chat_history": self._chat_history})
+        input_query = f"Query: {message_text}\nImages: {base64_images}" if len(base64_images) > 0 else message_text
+        result = self._agent_executor.invoke({"input": input_query, "chat_history": self._chat_history})
         self._chat_history.extend([
-            HumanMessage(content=message_text),
+            HumanMessage(content=input_query),
             AIMessage(content=result["output"]),
         ])
 
