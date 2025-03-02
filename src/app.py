@@ -8,13 +8,12 @@ from PIL import Image
 import utils
 from agent import Agent
 
-
 load_dotenv()
 
 OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 TEMPERATURE = float(os.getenv("TEMPERATURE"))
-MAX_TOKENS=int(os.getenv("MAX_TOKENS"))
-IMAGE_MAX_WIDTH=int(os.getenv("IMAGE_MAX_WIDTH"))
+MAX_TOKENS = int(os.getenv("MAX_TOKENS"))
+IMAGE_MAX_WIDTH = int(os.getenv("IMAGE_MAX_WIDTH"))
 VERBOSE = os.getenv("VERBOSE").lower()
 
 logger = logging.getLogger("capstone")
@@ -35,7 +34,9 @@ if VERBOSE not in ["true", "false"]:
     )
     VERBOSE = default_verbose
 
-agent = Agent(OPENAI_MODEL, TEMPERATURE, MAX_TOKENS, True if VERBOSE == "true" else False)
+agent = Agent(
+    OPENAI_MODEL, TEMPERATURE, MAX_TOKENS, True if VERBOSE == "true" else False
+)
 
 
 @cl.on_chat_start

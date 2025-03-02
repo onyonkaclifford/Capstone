@@ -9,7 +9,11 @@ def get_image_extension(image_name):
 def get_resized_image(image, max_width):
     img_w, img_h = image.size
     resize_factor = max_width / img_w
-    return image.resize((max_width, int(img_h * resize_factor))) if img_w > max_width else image
+    return (
+        image.resize((max_width, int(img_h * resize_factor)))
+        if img_w > max_width
+        else image
+    )
 
 
 def get_base64_encoded_image(image, image_extension):
