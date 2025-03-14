@@ -10,11 +10,11 @@ from agent import Agent
 
 load_dotenv()
 
-OPENAI_MODEL = os.getenv("OPENAI_MODEL")
-TEMPERATURE = float(os.getenv("TEMPERATURE"))
-MAX_TOKENS = int(os.getenv("MAX_TOKENS"))
-IMAGE_MAX_WIDTH = int(os.getenv("IMAGE_MAX_WIDTH"))
-VERBOSE = os.getenv("VERBOSE").lower()
+OPENAI_MODEL = "gpt-4o-mini"  # os.getenv("OPENAI_MODEL")
+TEMPERATURE = 0.7  # float(os.getenv("TEMPERATURE"))
+MAX_TOKENS = 1000  # int(os.getenv("MAX_TOKENS"))
+IMAGE_MAX_WIDTH = 1024  # int(os.getenv("IMAGE_MAX_WIDTH"))
+VERBOSE = "true"  # os.getenv("VERBOSE").lower()
 
 logger = logging.getLogger("capstone")
 default_temperature = 0.7
