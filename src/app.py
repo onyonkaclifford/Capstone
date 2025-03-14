@@ -61,8 +61,6 @@
 #     await cl.Message(result).send()
 
 
-
-
 import logging
 import os
 import chainlit as cl
@@ -79,7 +77,7 @@ TEMPERATURE = float(os.getenv("TEMPERATURE", 0.7))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", 10000))
 IMAGE_MAX_WIDTH = int(os.getenv("IMAGE_MAX_WIDTH", 480))
 VERBOSE = os.getenv("VERBOSE", "true").strip().lower()
-PDF_DIRECTORY = "docs/"  
+PDF_DIRECTORY = "docs/"
 
 logger = logging.getLogger("capstone")
 default_temperature = 0.7
@@ -120,84 +118,3 @@ async def on_message(message: cl.Message):
     result = agent.handle_message(message.content, images, images_mimes)
     await cl.Message(result).send()
 
-
-# import logging
-# import os
-# import chainlit as cl
-# from dotenv import load_dotenv
-# from PIL import Image
-# import utils
-# from agent import Agent
-
-# load_dotenv()
-
-# OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-# TEMPERATURE = float(os.getenv("TEMPERATURE", 0.7))
-# MAX_TOKENS = int(os.getenv("MAX_TOKENS", 10000))
-# IMAGE_MAX_WIDTH = int(os.getenv("IMAGE_MAX_WIDTH", 480))
-# VERBOSE = os.getenv("VERBOSE", "true").strip().lower()
-
-# logger = logging.getLogger("capstone")
-
-# agent = Agent(OPENAI_MODEL, TEMPERATURE, MAX_TOKENS, VERBOSE == "true")
-
-# @cl.on_chat_start
-# async def on_start():
-#     await cl.Message(content="I am ready for scene understanding!").send()
-
-# # @cl.on_message
-# # async def on_message(message: cl.Message):
-# #     images = []
-# #     images_mimes = []
-
-# #     # Handle image uploads
-# #     if message.elements:
-# #         for i in message.elements:
-# #             if i.type == "image":
-# #                 img = utils.get_resized_image(Image.open(i.path), IMAGE_MAX_WIDTH)
-# #                 img_ext = utils.get_image_extension(i.name)
-# #                 images.append(utils.get_base64_encoded_image(img, img_ext))
-# #                 images_mimes.append(f"image/{'jpeg' if img_ext == 'jpg' else img_ext}")
-
-# #                 # Save and index the image for retrieval
-# #                 image_path = f"scene_images/{i.name}"
-# #                 img.save(image_path)
-# #                 agent.add_image_to_index(image_path)
-
-# #     # Retrieve images relevant to the query
-# #     result_text, retrieved_images = agent.handle_message(message.content, images, images_mimes)
-
-# #     # Send response with images
-# #     elements = [cl.Image(path=img, name=os.path.basename(img)) for img in retrieved_images]
-# #     await cl.Message(content=result_text, elements=elements).send()
-
-# import base64
-# from io import BytesIO
-
-# @cl.on_message
-# async def on_message(message: cl.Message):
-#     images = []
-#     images_mimes = []
-
-#     # Handle image uploads
-#     if message.elements:
-#         for i in message.elements:
-#             if i.type == "image":
-#                 img = utils.get_resized_image(Image.open(i.path), IMAGE_MAX_WIDTH)
-#                 img_ext = utils.get_image_extension(i.name)
-#                 images.append(utils.get_base64_encoded_image(img, img_ext))
-#                 images_mimes.append(f"image/{'jpeg' if img_ext == 'jpg' else img_ext}")
-
-#                 # Save and index the image for retrieval
-#                 image_path = f"scene_images/{i.name}"
-#                 img.save(image_path)
-
-#                 # Index the image for retrieval
-#                 agent.add_image_to_index(image_path)
-
-#     # Retrieve images relevant to the query
-#     result_text, retrieved_images = agent.handle_message(message.content, images, images_mimes)
-
-#     # Send response with images
-#     elements = [cl.Image(path=img, name=os.path.basename(img)) for img in retrieved_images]
-#     await cl.Message(content=result_text, elements=elements).send()
