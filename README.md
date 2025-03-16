@@ -7,6 +7,8 @@
 
 Using a natural language interface to control a PR2 robot via CRAM
 
+For CRAM robot documentation, go to the CRAM robot README.md file at ./cram_robot/README.md
+
 ## Development
 
 ### Linting
@@ -20,14 +22,14 @@ this process.
 2. Install git hook scripts: `pre-commit install`
 3. (optional) Run against all files: `pre-commit run --all-files`
 
-### Usage
+## Usage
 
 Note: Create a `.env` file with keys similar to those of `.env.sample` and fill in the correct values before proceeding
 (the `.env` file is not checked into Git because it contains secrets)
 
-- Run: `chainlit run ./src/app.py --port 8000 -w`
+- Nomal usage during development: `chainlit run ./src/app.py --port 8000 -w`
 
-## Deployment
+Using Docker:
 
 1. Build image: `docker build -t capstone .`
 2. Run: `docker run -dp 0.0.0.0:8000:8000 --env-file .env capstone`

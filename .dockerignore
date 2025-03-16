@@ -1,7 +1,12 @@
 .vscode/
-venv/
+
 __pycache__/
+
 .chainlit/
 .files/
 
+venv/
+
 .env
+
+cram_robot/
