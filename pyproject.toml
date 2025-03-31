@@ -9,8 +9,9 @@ exclude = '''
 /(
     \.git
   | venv
+  | \.chainlit
 )/
 '''
 
 [tool.bandit]
-exclude_dirs = [".git", "venv"]
+exclude_dirs = [".git", "venv", ".chainlit"]
