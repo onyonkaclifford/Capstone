@@ -15,8 +15,12 @@ TEMPERATURE = float(os.getenv("TEMPERATURE"))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS"))
 IMAGE_MAX_WIDTH = int(os.getenv("IMAGE_MAX_WIDTH"))
 VERBOSE = os.getenv("VERBOSE").lower()
+LOGGER_NAME = os.getenv("LOGGER_NAME").lower()
+PYCRAM_API_HOST = os.getenv("PYCRAM_API_HOST")
+SYSTEM_MESSAGE_FILE = os.getenv("SYSTEM_MESSAGE_FILE")
+REQUESTS_TIMEOUT = int(os.getenv("REQUESTS_TIMEOUT"))
 
-logger = logging.getLogger("capstone")
+logger = logging.getLogger(LOGGER_NAME)
 default_temperature = 0.7
 default_verbose = "true"
 
@@ -34,8 +38,17 @@ if VERBOSE not in ["true", "false"]:
     )
     VERBOSE = default_verbose
 
+with open(SYSTEM_MESSAGE_FILE, "r") as f:
+    system_message = f.read()
+
 agent = Agent(
-    OPENAI_MODEL, TEMPERATURE, MAX_TOKENS, True if VERBOSE == "true" else False
+    OPENAI_MODEL,
+    TEMPERATURE,
+    MAX_TOKENS,
+    PYCRAM_API_HOST,
+    system_message,
+    REQUESTS_TIMEOUT,
+    True if VERBOSE == "true" else False,
 )
 
 

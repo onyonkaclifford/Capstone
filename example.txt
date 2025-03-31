@@ -1,0 +1,1995 @@
+Consider this code and what params we are using here:
+#!/usr/bin/env python3
+"""
+API interface for PyCRAM simulation functions.
+"""
+from fastapi import FastAPI, Body
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
+import uvicorn
+import sys
+import os
+import webbrowser
+import threading
+import time
+
+# Create the API app
+app = FastAPI(title="PyCRAM API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+)
+
+# Store environment objects globally
+env_obj = None
+world = None
+
+# Initialize environment - we'll do this before starting the server
+def init_environment():
+    global env_obj, world
+    # Import these here to prevent auto-execution of interactive code
+    from environment import create_environment, get_world
+    
+    print("Initializing environment for API mode...")
+    env_obj, world = create_environment()
+    if world is None:
+        print("Failed to initialize the world. Exiting...")
+        return False
+    print("Environment initialized successfully.")
+    return True
+
+# Import the non-interactive functions
+from robot_actions_api import (
+    move_robot,
+    pickup_and_place,
+    robot_perceive,
+    look_for_object,
+    unpack_arms,
+    detect_object,
+    transport_object
+)
+
+# Static files mounting - if we have a 'static' directory
+if os.path.exists('static'):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve the robot_control.html file directly
+@app.get("/", response_class=HTMLResponse)
+async def get_robot_control():
+    """Serve the robot control interface"""
+    try:
+        with open("robot_control.html", "r") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Robot control interface not found.</h1>")
+
+# API endpoints
+@app.post("/execute")
+async def execute_command(data: dict = Body(...)):
+    """Execute a PyCRAM command"""
+    command = data.get("command")
+    params = data.get("params", {})
+    
+    try:
+        if command == "spawn_objects":
+            # Extract the correct parameters for spawn_objects
+            object_choice = params.get("object_choice")
+            coordinates = params.get("coordinates")
+            color = params.get("color")
+            
+            # Call our non-interactive spawn_objects
+            from robot_actions_api import spawn_objects
+            result = spawn_objects(object_choice, coordinates, color)
+            return result
+        elif command == "move_robot":
+            result = move_robot(**params)
+            return result
+        elif command == "pickup_and_place":
+            result = pickup_and_place(**params)
+            return result
+        elif command == "robot_perceive":
+            result = robot_perceive(**params)
+            return result
+        elif command == "look_for_object":
+            result = look_for_object(**params)
+            return result
+        elif command == "unpack_arms":
+            result = unpack_arms()
+            return result
+        elif command == "detect_object":
+            result = detect_object(**params)
+            return result
+        elif command == "transport_object":
+            result = transport_object(**params)
+            return result
+        else:
+            return {"status": "error", "message": f"Unknown command: {command}"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+@app.get("/commands")
+async def list_commands():
+    """List available commands"""
+    return {
+        "available_commands": [
+            "spawn_objects",
+            "move_robot",
+            "pickup_and_place",
+            "robot_perceive",
+            "look_for_object",
+            "unpack_arms", 
+            "detect_object",
+            "transport_object"
+        ]
+    }
+
+def open_browser():
+    """Open browser after a short delay to ensure server is up"""
+    time.sleep(2)  # Wait for server to start
+    webbrowser.open('http://localhost:8001')
+    print("Browser window opened. If no window appeared, navigate to: http://localhost:8001")
+
+# Run the server when this file is executed directly
+if __name__ == "__main__":
+    # Initialize the environment first
+    if init_environment():
+        print("Starting PyCRAM API server on port 8001...")
+        print("Web interface will be available at: http://localhost:8001")
+        print("To access from other devices, use: http://YOUR_IP_ADDRESS:8001")
+        
+        # Open browser automatically in a separate thread
+        threading.Thread(target=open_browser, daemon=True).start()
+        
+        # Start the server
+        uvicorn.run(app, host="0.0.0.0", port=8001) 
+
+Here is more code:
+#!/usr/bin/env python3
+"""
+Non-interactive versions of robot actions for API usage.
+"""
+import time
+import threading
+from pycram.process_module import simulated_robot
+from pycram.designators.motion_designator import *
+from pycram.designators.location_designator import *
+from pycram.designators.action_designator import *
+from pycram.designators.object_designator import *
+from pycram.datastructures.enums import Arms, Grasp, TorsoState, DetectionTechnique
+from pycram.datastructures.pose import Pose
+from pycram.world_concepts.world_object import Object
+from pycram.datastructures.enums import ObjectType
+from pycrap.ontologies import Milk, Cereal, Spoon, Bowl
+from utils.color_wrapper import ColorWrapper
+
+# Import from environment but avoid initialization side effects
+def get_world_safely():
+    from environment import get_world
+    return get_world()
+
+def move_robot(coordinates=None):
+    """
+    Move robot to specified coordinates without interactive prompts.
+    
+    Args:
+        coordinates (list): [x, y, z] coordinates to move to
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        # Use provided coordinates or defaults
+        if coordinates is None or len(coordinates) != 3:
+            coordinates = [0, 0, 0]  # Default position
+            
+        dest_vals = [float(val) for val in coordinates]
+        
+        with simulated_robot:
+            robot_desig = ObjectDesignatorDescription(names=["pr2"]).resolve()
+            nav_pose = Pose(dest_vals)
+            navigate_action = NavigateAction(target_locations=[nav_pose]).resolve()
+            print(f"API: Navigating to {nav_pose}")
+            navigate_action.perform()
+            print("API: Robot has moved to destination.")
+        
+        return {
+            "status": "success", 
+            "message": f"Robot moved to coordinates {dest_vals}",
+            "coordinates": dest_vals
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def pickup_and_place(object_name=None, target_location=None, arm=None):
+    """
+    Pick up an object and place it at a target location without interactive prompts.
+    
+    Args:
+        object_name (str): Name of the object to pick up
+        target_location (list): [x, y, z] coordinates for placement
+        arm (str): Which arm to use ('left', 'right', or None for automatic)
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        # Default values
+        if object_name is None:
+            object_name = "cereal"  # Default object to pick up
+            
+        if target_location is None:
+            target_location = [1.0, 1.0, 0.8]  # Default placement location
+            
+        # Convert arm string to enum
+        arm_enum = None
+        if arm == "left":
+            arm_enum = Arms.LEFT
+        elif arm == "right":
+            arm_enum = Arms.RIGHT
+        
+        # Perform pickup and place action
+        with simulated_robot:
+            # Get the world
+            world = get_world_safely()
+            
+            # Make object name lookup case-insensitive
+            # First, try the exact name as provided
+            object_desig = BelieveObject(names=[object_name])
+            
+            # If that fails, try a case-insensitive search
+            robot_desig = ObjectDesignatorDescription(names=["pr2"]).resolve()
+            
+            print(f"API: Preparing to pick up {object_name}...")
+            
+            # Park arms and adjust torso for pickup
+            ParkArmsAction([Arms.BOTH]).resolve().perform()
+            MoveTorsoAction([TorsoState.HIGH]).resolve().perform()
+            
+            # Resolve pickup location
+            print("API: Resolving pickup location...")
+            try:
+                # Try to resolve with the original name case
+                try:
+                    object_resolved = object_desig.resolve()
+                except StopIteration:
+                    # If that fails, try some case variations
+                    print(f"API: Could not find '{object_name}', trying case variations...")
+                    variants = [
+                        object_name.lower(),
+                        object_name.upper(),
+                        object_name.capitalize()
+                    ]
+                    
+                    # Try each case variant
+                    object_resolved = None
+                    for variant in variants:
+                        if variant != object_name:  # Skip if same as original
+                            try:
+                                variant_desig = BelieveObject(names=[variant])
+                                object_resolved = variant_desig.resolve()
+                                if object_resolved:
+                                    print(f"API: Found object with name '{variant}'")
+                                    object_desig = variant_desig  # Use the successful designator
+                                    object_name = variant  # Update name for messages
+                                    break
+                            except StopIteration:
+                                continue
+                    
+                    if not object_resolved:
+                        return {"status": "error", "message": f"Object '{object_name}' not found in the world. You may need to spawn it first."}
+                
+                if not object_resolved:
+                    return {"status": "error", "message": f"Object '{object_name}' not found in the world. You may need to spawn it first."}
+                
+                pickup_pose = CostmapLocation(
+                    target=object_resolved,
+                    reachable_for=robot_desig
+                ).resolve()
+            except StopIteration:
+                return {"status": "error", "message": f"Object '{object_name}' not found in the world. You may need to spawn it first."}
+            except Exception as e:
+                return {"status": "error", "message": f"Error finding object location: {str(e)}"}
+            
+            if not pickup_pose.reachable_arms:
+                return {"status": "error", "message": f"No reachable arms for object {object_name}"}
+            
+            # Use specified arm or the first available one
+            pickup_arm = arm_enum if arm_enum else pickup_pose.reachable_arms[0]
+            
+            # Navigate to pickup location
+            print(f"API: Navigating to pickup location at {pickup_pose.pose}")
+            NavigateAction(target_locations=[pickup_pose.pose]).resolve().perform()
+            
+            # Execute pickup
+            print("API: Executing pickup action...")
+            PickUpAction(
+                object_designator_description=object_desig,
+                arms=[pickup_arm],
+                grasps=[Grasp.FRONT]
+            ).resolve().perform()
+            
+            ParkArmsAction([Arms.BOTH]).resolve().perform()
+            print("API: Pickup action performed.")
+            
+            # Allow simulation state to update
+            time.sleep(0.5)
+            
+            # Prepare for placement
+            destination_pose = Pose(target_location)
+            print(f"API: Destination pose for placement: {destination_pose}")
+            
+            # Resolve placement location
+            print("API: Resolving placement location...")
+            
+            # Simple timeout implementation for placement resolution
+           
+            
+            place_stand = None
+            resolution_timeout = 5  # seconds
+            resolution_complete = False
+            resolution_error = None
+            
+            def resolve_placement():
+                nonlocal place_stand, resolution_complete, resolution_error
+                try:
+                    place_stand = CostmapLocation(
+                        destination_pose,
+                        reachable_for=robot_desig,
+                        reachable_arm=pickup_arm
+                    ).resolve()
+                    resolution_complete = True
+                except Exception as e:
+                    resolution_error = str(e)
+                    resolution_complete = True
+            
+            # Start resolution in thread
+            resolution_thread = threading.Thread(target=resolve_placement)
+            resolution_thread.daemon = True
+            resolution_thread.start()
+            
+            # Wait for resolution with timeout
+            start_time = time.time()
+            while not resolution_complete and time.time() - start_time < resolution_timeout:
+                time.sleep(0.1)
+            
+            # Check resolution status
+            if not resolution_complete:
+                print("API: Placement location resolution timed out")
+                # Fallback to direct placement at the current location
+                place_stand = None
+                
+            if resolution_error:
+                print(f"API: Error in placement resolution: {resolution_error}")
+                place_stand = None
+                
+            # If resolution failed, use a direct approach
+            if place_stand is None or not hasattr(place_stand, 'pose'):
+                print("API: Using fallback placement approach")
+                # Try a direct placement without costmap resolution
+                print("API: Executing place action with direct pose...")
+                try:
+                    PlaceAction(
+                        object_designator_description=object_desig,
+                        target_locations=[destination_pose],
+                        arms=[pickup_arm]
+                    ).resolve().perform()
+                    
+                    ParkArmsAction([Arms.BOTH]).resolve().perform()
+                    print("API: Place action completed with fallback method.")
+                    
+                    return {
+                        "status": "success",
+                        "message": f"Successfully picked up {object_name} and placed at {target_location} (using fallback)",
+                        "object": object_name,
+                        "target_location": target_location,
+                        "arm_used": str(pickup_arm)
+                    }
+                except Exception as place_error:
+                    return {"status": "error", "message": f"Failed to place object using fallback method: {str(place_error)}"}
+            
+            # Regular placement execution if resolution succeeded
+            # Navigate to placement location
+            print(f"API: Navigating to placement location at {place_stand.pose}")
+            NavigateAction(target_locations=[place_stand.pose]).resolve().perform()
+            
+            # Execute place action
+            print("API: Executing place action...")
+            PlaceAction(
+                object_designator_description=object_desig,
+                target_locations=[destination_pose],
+                arms=[pickup_arm]
+            ).resolve().perform()
+            
+            ParkArmsAction([Arms.BOTH]).resolve().perform()
+            print("API: Place action completed successfully.")
+            
+            return {
+                "status": "success",
+                "message": f"Successfully picked up {object_name} and placed at {target_location}",
+                "object": object_name,
+                "target_location": target_location,
+                "arm_used": str(pickup_arm)
+            }
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def robot_perceive(perception_area=None):
+    """
+    Make the robot perceive its environment without interactive prompts.
+    
+    Args:
+        perception_area (str): Area to perceive ('table', 'room', etc.)
+        
+    Returns:
+        dict: Result of the operation with perceived objects
+    """
+    try:
+        if perception_area is None:
+            perception_area = "table"  # Default area
+            
+        with simulated_robot:
+            # Create a perception action
+            perceive_action = PerceiveAction(area=perception_area).resolve()
+            
+            print(f"API: Robot perceiving {perception_area}...")
+            results = perceive_action.perform()
+            
+            # Extract object information from results
+            perceived_objects = []
+            for obj in results:
+                perceived_objects.append({
+                    "name": obj.name if hasattr(obj, "name") else "unknown",
+                    "type": str(type(obj))
+                })
+                
+        return {
+            "status": "success",
+            "message": f"Robot perceived {len(perceived_objects)} objects in {perception_area}",
+            "perceived_objects": perceived_objects
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def look_for_object(object_name=None):
+    """
+    Make the robot look for a specific object without interactive prompts.
+    
+    Args:
+        object_name (str): Name of the object to look for
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        if object_name is None:
+            object_name = "cup1"  # Default object to look for
+            
+        with simulated_robot:
+            # Create an object designator for the search
+            obj_desig = ObjectDesignatorDescription(names=[object_name]).resolve()
+            
+            # Create a look-for action
+            look_action = LookForAction(object=obj_desig).resolve()
+            
+            print(f"API: Looking for {object_name}...")
+            result = look_action.perform()
+            
+            if result:
+                position = result.pose.position if hasattr(result, 'pose') else "unknown"
+                return {
+                    "status": "success",
+                    "message": f"Found {object_name}",
+                    "object": object_name,
+                    "position": str(position)
+                }
+            else:
+                return {
+                    "status": "not_found",
+                    "message": f"Could not find {object_name}"
+                }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def unpack_arms():
+    """
+    Unpack the robot's arms without interactive prompts.
+    
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        with simulated_robot:
+            # Create unpacking action
+            unpack_action = UnpackAction().resolve()
+            
+            print("API: Unpacking arms...")
+            unpack_action.perform()
+            
+        return {
+            "status": "success",
+            "message": "Robot arms unpacked successfully"
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def detect_object(object_type=None, detection_area=None):
+    """
+    Detect objects of a specific type without interactive prompts.
+    
+    Args:
+        object_type (str): Type of object to detect ('Milk', 'Cereal', 'Spoon', 'Bowl')
+        detection_area (str): Not used in this implementation
+        
+    Returns:
+        dict: Result of the operation with detected objects
+    """
+    try:
+        if object_type is None:
+            object_type = "Cereal"  # Default object type
+            
+        with simulated_robot:
+            # Create detection action with the correct parameter names
+            believe_desig = BelieveObject(types=[object_type])
+            
+            print(f"API: Detecting objects of type {object_type}...")
+            detected = DetectAction(
+                technique=DetectionTechnique.TYPES,
+                object_designator_description=believe_desig
+            ).resolve().perform()
+            
+            detected_objects = []
+            if detected:
+                for obj in detected:
+                    detected_objects.append({
+                        "name": obj.name if hasattr(obj, "name") else "unknown",
+                        "type": str(type(obj))
+                    })
+                
+        return {
+            "status": "success",
+            "message": f"Detected {len(detected_objects)} objects of type {object_type}",
+            "detected_objects": detected_objects
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def transport_object(object_name=None, target_location=None, arm=None):
+    """
+    Transport an object to a target location without interactive prompts.
+    
+    Args:
+        object_name (str): Name of the object to transport
+        target_location (list): [x, y, z] coordinates for the target location
+        arm (str): Which arm to use ('left', 'right')
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        if object_name is None:
+            object_name = "cereal"  # Default object
+            
+        if target_location is None:
+            target_location = [1.0, 1.0, 0.8]  # Default target location
+            
+        # Convert arm string to enum
+        arm_enum = None
+        if arm == "left":
+            arm_enum = Arms.LEFT
+        elif arm == "right":
+            arm_enum = Arms.RIGHT
+        else:
+            # Default to right arm if not specified
+            arm_enum = Arms.RIGHT
+            
+        with simulated_robot:
+            # Create object designator
+            object_desig = BelieveObject(names=[object_name])
+            destination_pose = Pose(target_location)
+            
+            print(f"API: Transporting {object_name} to {target_location} using {arm_enum}...")
+            
+            # Execute transport action with the correct parameter names
+            TransportAction(
+                object_desig, 
+                [destination_pose],
+                [arm_enum]
+            ).resolve().perform()
+            
+            print(f"API: Transport action completed for {object_name}")
+            
+        return {
+            "status": "success",
+            "message": f"Successfully transported {object_name} to {target_location}",
+            "object": object_name,
+            "target_location": target_location,
+            "arm_used": str(arm_enum)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def spawn_objects(object_choice=None, coordinates=None, color=None):
+    """
+    Non-interactive version of spawn_objects that creates objects based on parameters.
+    
+    Args:
+        object_choice (str): "cereal", "milk", "spoon", "bowl", or a custom name
+        coordinates (list): [x, y, z] coordinates for object placement
+        color (str): Color name (e.g., "red", "blue") or None for default
+        
+    Returns:
+        dict: Information about the created object
+    """
+    try:
+        # Define available object types
+        object_types = {
+            "cereal": (Cereal, "breakfast_cereal.stl"),
+            "milk": (Milk, "milk.stl"),
+            "spoon": (Spoon, "spoon.stl"),
+            "bowl": (Bowl, "bowl.stl")
+        }
+        
+        # Default values
+        if object_choice is None:
+            object_choice = "bowl"
+            
+        if coordinates is None:
+            coordinates = [1.4, 1.0, 0.95]  # Default position
+            
+        # Parse coordinates
+        try:
+            pose_vals = [float(val) for val in coordinates]
+            if len(pose_vals) != 3:
+                return {"status": "error", "message": "Coordinates must have exactly 3 values (x,y,z)"}
+        except Exception as e:
+            return {"status": "error", "message": f"Error parsing coordinates: {str(e)}"}
+            
+        # Handle color
+        color_wrapper = ColorWrapper(color) if color else None
+        
+        # Create the object
+        if object_choice in object_types:
+            obj_ontology, obj_file = object_types[object_choice]
+            obj_name = object_choice  # Use the choice as the name
+        else:
+            # Custom/generic object
+            obj_name = object_choice
+            obj_ontology = ObjectType.GENERIC
+            obj_file = f"{object_choice}.stl"  # Assume filename matches object name
+            
+        # Create the object
+        try:
+            obj = Object(
+                obj_name, 
+                obj_ontology, 
+                obj_file, 
+                pose=Pose(pose_vals), 
+                color=color_wrapper
+            )
+            
+            print(f"API: Object '{obj_name}' created at pose {pose_vals} with color {color if color else 'default'}.")
+            
+            return {
+                "status": "success",
+                "message": f"Object '{obj_name}' created successfully",
+                "object": {
+                    "name": obj_name,
+                    "type": str(obj_ontology),
+                    "file": obj_file,
+                    "pose": pose_vals,
+                    "color": color if color else "default"
+                }
+            }
+        except FileNotFoundError as e:
+            return {"status": "error", "message": f"File not found: {str(e)}"}
+        except Exception as e:
+            return {"status": "error", "message": f"Error creating object: {str(e)}"}
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)} 
+
+
+Now here is a system prompt:
+   system_message = SystemMessage(
+            content=(
+                "You are an advanced AI assistant capable of answering questions and using tools when needed. "
+                "IMPORTANT: You MUST use available tools instead of answering from memory when applicable. "
+                "\n\n1. For ANY questions about circles (area, circumference, radius, diameter), use the CircleCalculator tool."
+                "\n\n2. For robot control commands, use the RobotControl tool. For example:"
+                "\n- To move the robot: RobotControl with command='move_robot' and appropriate parameters"
+                "\n- To pick up an object: RobotControl with command='pickup_and_place' and appropriate parameters"
+                "\n- To detect objects: RobotControl with command='detect_object' with appropriate parameters"
+                "\n\n3. To get a list of all available robot commands, use the ListRobotCommands tool."
+                "\n\nDo not say phrases like 'I will calculate' or 'Let me use the tool' - just USE the tool directly."
+                "\n\nWhen a user asks you to perform a robot action, determine which command is needed and call the appropriate API."
+            )
+        )
+
+
+Based on the parameters used lets improve our system prompt
+What ideas do you have?.
+Consider this code and what params we are using here:
+#!/usr/bin/env python3
+"""
+API interface for PyCRAM simulation functions.
+"""
+from fastapi import FastAPI, Body
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
+import uvicorn
+import sys
+import os
+import webbrowser
+import threading
+import time
+
+# Create the API app
+app = FastAPI(title="PyCRAM API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+)
+
+# Store environment objects globally
+env_obj = None
+world = None
+
+# Initialize environment - we'll do this before starting the server
+def init_environment():
+    global env_obj, world
+    # Import these here to prevent auto-execution of interactive code
+    from environment import create_environment, get_world
+    
+    print("Initializing environment for API mode...")
+    env_obj, world = create_environment()
+    if world is None:
+        print("Failed to initialize the world. Exiting...")
+        return False
+    print("Environment initialized successfully.")
+    return True
+
+# Import the non-interactive functions
+from robot_actions_api import (
+    move_robot,
+    pickup_and_place,
+    robot_perceive,
+    look_for_object,
+    unpack_arms,
+    detect_object,
+    transport_object
+)
+
+# Static files mounting - if we have a 'static' directory
+if os.path.exists('static'):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve the robot_control.html file directly
+@app.get("/", response_class=HTMLResponse)
+async def get_robot_control():
+    """Serve the robot control interface"""
+    try:
+        with open("robot_control.html", "r") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Robot control interface not found.</h1>")
+
+# API endpoints
+@app.post("/execute")
+async def execute_command(data: dict = Body(...)):
+    """Execute a PyCRAM command"""
+    command = data.get("command")
+    params = data.get("params", {})
+    
+    try:
+        if command == "spawn_objects":
+            # Extract the correct parameters for spawn_objects
+            object_choice = params.get("object_choice")
+            coordinates = params.get("coordinates")
+            color = params.get("color")
+            
+            # Call our non-interactive spawn_objects
+            from robot_actions_api import spawn_objects
+            result = spawn_objects(object_choice, coordinates, color)
+            return result
+        elif command == "move_robot":
+            result = move_robot(**params)
+            return result
+        elif command == "pickup_and_place":
+            result = pickup_and_place(**params)
+            return result
+        elif command == "robot_perceive":
+            result = robot_perceive(**params)
+            return result
+        elif command == "look_for_object":
+            result = look_for_object(**params)
+            return result
+        elif command == "unpack_arms":
+            result = unpack_arms()
+            return result
+        elif command == "detect_object":
+            result = detect_object(**params)
+            return result
+        elif command == "transport_object":
+            result = transport_object(**params)
+            return result
+        else:
+            return {"status": "error", "message": f"Unknown command: {command}"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+@app.get("/commands")
+async def list_commands():
+    """List available commands"""
+    return {
+        "available_commands": [
+            "spawn_objects",
+            "move_robot",
+            "pickup_and_place",
+            "robot_perceive",
+            "look_for_object",
+            "unpack_arms", 
+            "detect_object",
+            "transport_object"
+        ]
+    }
+
+def open_browser():
+    """Open browser after a short delay to ensure server is up"""
+    time.sleep(2)  # Wait for server to start
+    webbrowser.open('http://localhost:8001')
+    print("Browser window opened. If no window appeared, navigate to: http://localhost:8001")
+
+# Run the server when this file is executed directly
+if __name__ == "__main__":
+    # Initialize the environment first
+    if init_environment():
+        print("Starting PyCRAM API server on port 8001...")
+        print("Web interface will be available at: http://localhost:8001")
+        print("To access from other devices, use: http://YOUR_IP_ADDRESS:8001")
+        
+        # Open browser automatically in a separate thread
+        threading.Thread(target=open_browser, daemon=True).start()
+        
+        # Start the server
+        uvicorn.run(app, host="0.0.0.0", port=8001) 
+
+Here is more code:
+#!/usr/bin/env python3
+"""
+Non-interactive versions of robot actions for API usage.
+"""
+import time
+import threading
+from pycram.process_module import simulated_robot
+from pycram.designators.motion_designator import *
+from pycram.designators.location_designator import *
+from pycram.designators.action_designator import *
+from pycram.designators.object_designator import *
+from pycram.datastructures.enums import Arms, Grasp, TorsoState, DetectionTechnique
+from pycram.datastructures.pose import Pose
+from pycram.world_concepts.world_object import Object
+from pycram.datastructures.enums import ObjectType
+from pycrap.ontologies import Milk, Cereal, Spoon, Bowl
+from utils.color_wrapper import ColorWrapper
+
+# Import from environment but avoid initialization side effects
+def get_world_safely():
+    from environment import get_world
+    return get_world()
+
+def move_robot(coordinates=None):
+    """
+    Move robot to specified coordinates without interactive prompts.
+    
+    Args:
+        coordinates (list): [x, y, z] coordinates to move to
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        # Use provided coordinates or defaults
+        if coordinates is None or len(coordinates) != 3:
+            coordinates = [0, 0, 0]  # Default position
+            
+        dest_vals = [float(val) for val in coordinates]
+        
+        with simulated_robot:
+            robot_desig = ObjectDesignatorDescription(names=["pr2"]).resolve()
+            nav_pose = Pose(dest_vals)
+            navigate_action = NavigateAction(target_locations=[nav_pose]).resolve()
+            print(f"API: Navigating to {nav_pose}")
+            navigate_action.perform()
+            print("API: Robot has moved to destination.")
+        
+        return {
+            "status": "success", 
+            "message": f"Robot moved to coordinates {dest_vals}",
+            "coordinates": dest_vals
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def pickup_and_place(object_name=None, target_location=None, arm=None):
+    """
+    Pick up an object and place it at a target location without interactive prompts.
+    
+    Args:
+        object_name (str): Name of the object to pick up
+        target_location (list): [x, y, z] coordinates for placement
+        arm (str): Which arm to use ('left', 'right', or None for automatic)
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        # Default values
+        if object_name is None:
+            object_name = "cereal"  # Default object to pick up
+            
+        if target_location is None:
+            target_location = [1.0, 1.0, 0.8]  # Default placement location
+            
+        # Convert arm string to enum
+        arm_enum = None
+        if arm == "left":
+            arm_enum = Arms.LEFT
+        elif arm == "right":
+            arm_enum = Arms.RIGHT
+        
+        # Perform pickup and place action
+        with simulated_robot:
+            # Get the world
+            world = get_world_safely()
+            
+            # Make object name lookup case-insensitive
+            # First, try the exact name as provided
+            object_desig = BelieveObject(names=[object_name])
+            
+            # If that fails, try a case-insensitive search
+            robot_desig = ObjectDesignatorDescription(names=["pr2"]).resolve()
+            
+            print(f"API: Preparing to pick up {object_name}...")
+            
+            # Park arms and adjust torso for pickup
+            ParkArmsAction([Arms.BOTH]).resolve().perform()
+            MoveTorsoAction([TorsoState.HIGH]).resolve().perform()
+            
+            # Resolve pickup location
+            print("API: Resolving pickup location...")
+            try:
+                # Try to resolve with the original name case
+                try:
+                    object_resolved = object_desig.resolve()
+                except StopIteration:
+                    # If that fails, try some case variations
+                    print(f"API: Could not find '{object_name}', trying case variations...")
+                    variants = [
+                        object_name.lower(),
+                        object_name.upper(),
+                        object_name.capitalize()
+                    ]
+                    
+                    # Try each case variant
+                    object_resolved = None
+                    for variant in variants:
+                        if variant != object_name:  # Skip if same as original
+                            try:
+                                variant_desig = BelieveObject(names=[variant])
+                                object_resolved = variant_desig.resolve()
+                                if object_resolved:
+                                    print(f"API: Found object with name '{variant}'")
+                                    object_desig = variant_desig  # Use the successful designator
+                                    object_name = variant  # Update name for messages
+                                    break
+                            except StopIteration:
+                                continue
+                    
+                    if not object_resolved:
+                        return {"status": "error", "message": f"Object '{object_name}' not found in the world. You may need to spawn it first."}
+                
+                if not object_resolved:
+                    return {"status": "error", "message": f"Object '{object_name}' not found in the world. You may need to spawn it first."}
+                
+                pickup_pose = CostmapLocation(
+                    target=object_resolved,
+                    reachable_for=robot_desig
+                ).resolve()
+            except StopIteration:
+                return {"status": "error", "message": f"Object '{object_name}' not found in the world. You may need to spawn it first."}
+            except Exception as e:
+                return {"status": "error", "message": f"Error finding object location: {str(e)}"}
+            
+            if not pickup_pose.reachable_arms:
+                return {"status": "error", "message": f"No reachable arms for object {object_name}"}
+            
+            # Use specified arm or the first available one
+            pickup_arm = arm_enum if arm_enum else pickup_pose.reachable_arms[0]
+            
+            # Navigate to pickup location
+            print(f"API: Navigating to pickup location at {pickup_pose.pose}")
+            NavigateAction(target_locations=[pickup_pose.pose]).resolve().perform()
+            
+            # Execute pickup
+            print("API: Executing pickup action...")
+            PickUpAction(
+                object_designator_description=object_desig,
+                arms=[pickup_arm],
+                grasps=[Grasp.FRONT]
+            ).resolve().perform()
+            
+            ParkArmsAction([Arms.BOTH]).resolve().perform()
+            print("API: Pickup action performed.")
+            
+            # Allow simulation state to update
+            time.sleep(0.5)
+            
+            # Prepare for placement
+            destination_pose = Pose(target_location)
+            print(f"API: Destination pose for placement: {destination_pose}")
+            
+            # Resolve placement location
+            print("API: Resolving placement location...")
+            
+            # Simple timeout implementation for placement resolution
+           
+            
+            place_stand = None
+            resolution_timeout = 5  # seconds
+            resolution_complete = False
+            resolution_error = None
+            
+            def resolve_placement():
+                nonlocal place_stand, resolution_complete, resolution_error
+                try:
+                    place_stand = CostmapLocation(
+                        destination_pose,
+                        reachable_for=robot_desig,
+                        reachable_arm=pickup_arm
+                    ).resolve()
+                    resolution_complete = True
+                except Exception as e:
+                    resolution_error = str(e)
+                    resolution_complete = True
+            
+            # Start resolution in thread
+            resolution_thread = threading.Thread(target=resolve_placement)
+            resolution_thread.daemon = True
+            resolution_thread.start()
+            
+            # Wait for resolution with timeout
+            start_time = time.time()
+            while not resolution_complete and time.time() - start_time < resolution_timeout:
+                time.sleep(0.1)
+            
+            # Check resolution status
+            if not resolution_complete:
+                print("API: Placement location resolution timed out")
+                # Fallback to direct placement at the current location
+                place_stand = None
+                
+            if resolution_error:
+                print(f"API: Error in placement resolution: {resolution_error}")
+                place_stand = None
+                
+            # If resolution failed, use a direct approach
+            if place_stand is None or not hasattr(place_stand, 'pose'):
+                print("API: Using fallback placement approach")
+                # Try a direct placement without costmap resolution
+                print("API: Executing place action with direct pose...")
+                try:
+                    PlaceAction(
+                        object_designator_description=object_desig,
+                        target_locations=[destination_pose],
+                        arms=[pickup_arm]
+                    ).resolve().perform()
+                    
+                    ParkArmsAction([Arms.BOTH]).resolve().perform()
+                    print("API: Place action completed with fallback method.")
+                    
+                    return {
+                        "status": "success",
+                        "message": f"Successfully picked up {object_name} and placed at {target_location} (using fallback)",
+                        "object": object_name,
+                        "target_location": target_location,
+                        "arm_used": str(pickup_arm)
+                    }
+                except Exception as place_error:
+                    return {"status": "error", "message": f"Failed to place object using fallback method: {str(place_error)}"}
+            
+            # Regular placement execution if resolution succeeded
+            # Navigate to placement location
+            print(f"API: Navigating to placement location at {place_stand.pose}")
+            NavigateAction(target_locations=[place_stand.pose]).resolve().perform()
+            
+            # Execute place action
+            print("API: Executing place action...")
+            PlaceAction(
+                object_designator_description=object_desig,
+                target_locations=[destination_pose],
+                arms=[pickup_arm]
+            ).resolve().perform()
+            
+            ParkArmsAction([Arms.BOTH]).resolve().perform()
+            print("API: Place action completed successfully.")
+            
+            return {
+                "status": "success",
+                "message": f"Successfully picked up {object_name} and placed at {target_location}",
+                "object": object_name,
+                "target_location": target_location,
+                "arm_used": str(pickup_arm)
+            }
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def robot_perceive(perception_area=None):
+    """
+    Make the robot perceive its environment without interactive prompts.
+    
+    Args:
+        perception_area (str): Area to perceive ('table', 'room', etc.)
+        
+    Returns:
+        dict: Result of the operation with perceived objects
+    """
+    try:
+        if perception_area is None:
+            perception_area = "table"  # Default area
+            
+        with simulated_robot:
+            # Create a perception action
+            perceive_action = PerceiveAction(area=perception_area).resolve()
+            
+            print(f"API: Robot perceiving {perception_area}...")
+            results = perceive_action.perform()
+            
+            # Extract object information from results
+            perceived_objects = []
+            for obj in results:
+                perceived_objects.append({
+                    "name": obj.name if hasattr(obj, "name") else "unknown",
+                    "type": str(type(obj))
+                })
+                
+        return {
+            "status": "success",
+            "message": f"Robot perceived {len(perceived_objects)} objects in {perception_area}",
+            "perceived_objects": perceived_objects
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def look_for_object(object_name=None):
+    """
+    Make the robot look for a specific object without interactive prompts.
+    
+    Args:
+        object_name (str): Name of the object to look for
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        if object_name is None:
+            object_name = "cup1"  # Default object to look for
+            
+        with simulated_robot:
+            # Create an object designator for the search
+            obj_desig = ObjectDesignatorDescription(names=[object_name]).resolve()
+            
+            # Create a look-for action
+            look_action = LookForAction(object=obj_desig).resolve()
+            
+            print(f"API: Looking for {object_name}...")
+            result = look_action.perform()
+            
+            if result:
+                position = result.pose.position if hasattr(result, 'pose') else "unknown"
+                return {
+                    "status": "success",
+                    "message": f"Found {object_name}",
+                    "object": object_name,
+                    "position": str(position)
+                }
+            else:
+                return {
+                    "status": "not_found",
+                    "message": f"Could not find {object_name}"
+                }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def unpack_arms():
+    """
+    Unpack the robot's arms without interactive prompts.
+    
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        with simulated_robot:
+            # Create unpacking action
+            unpack_action = UnpackAction().resolve()
+            
+            print("API: Unpacking arms...")
+            unpack_action.perform()
+            
+        return {
+            "status": "success",
+            "message": "Robot arms unpacked successfully"
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def detect_object(object_type=None, detection_area=None):
+    """
+    Detect objects of a specific type without interactive prompts.
+    
+    Args:
+        object_type (str): Type of object to detect ('Milk', 'Cereal', 'Spoon', 'Bowl')
+        detection_area (str): Not used in this implementation
+        
+    Returns:
+        dict: Result of the operation with detected objects
+    """
+    try:
+        if object_type is None:
+            object_type = "Cereal"  # Default object type
+            
+        with simulated_robot:
+            # Create detection action with the correct parameter names
+            believe_desig = BelieveObject(types=[object_type])
+            
+            print(f"API: Detecting objects of type {object_type}...")
+            detected = DetectAction(
+                technique=DetectionTechnique.TYPES,
+                object_designator_description=believe_desig
+            ).resolve().perform()
+            
+            detected_objects = []
+            if detected:
+                for obj in detected:
+                    detected_objects.append({
+                        "name": obj.name if hasattr(obj, "name") else "unknown",
+                        "type": str(type(obj))
+                    })
+                
+        return {
+            "status": "success",
+            "message": f"Detected {len(detected_objects)} objects of type {object_type}",
+            "detected_objects": detected_objects
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def transport_object(object_name=None, target_location=None, arm=None):
+    """
+    Transport an object to a target location without interactive prompts.
+    
+    Args:
+        object_name (str): Name of the object to transport
+        target_location (list): [x, y, z] coordinates for the target location
+        arm (str): Which arm to use ('left', 'right')
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        if object_name is None:
+            object_name = "cereal"  # Default object
+            
+        if target_location is None:
+            target_location = [1.0, 1.0, 0.8]  # Default target location
+            
+        # Convert arm string to enum
+        arm_enum = None
+        if arm == "left":
+            arm_enum = Arms.LEFT
+        elif arm == "right":
+            arm_enum = Arms.RIGHT
+        else:
+            # Default to right arm if not specified
+            arm_enum = Arms.RIGHT
+            
+        with simulated_robot:
+            # Create object designator
+            object_desig = BelieveObject(names=[object_name])
+            destination_pose = Pose(target_location)
+            
+            print(f"API: Transporting {object_name} to {target_location} using {arm_enum}...")
+            
+            # Execute transport action with the correct parameter names
+            TransportAction(
+                object_desig, 
+                [destination_pose],
+                [arm_enum]
+            ).resolve().perform()
+            
+            print(f"API: Transport action completed for {object_name}")
+            
+        return {
+            "status": "success",
+            "message": f"Successfully transported {object_name} to {target_location}",
+            "object": object_name,
+            "target_location": target_location,
+            "arm_used": str(arm_enum)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+def spawn_objects(object_choice=None, coordinates=None, color=None):
+    """
+    Non-interactive version of spawn_objects that creates objects based on parameters.
+    
+    Args:
+        object_choice (str): "cereal", "milk", "spoon", "bowl", or a custom name
+        coordinates (list): [x, y, z] coordinates for object placement
+        color (str): Color name (e.g., "red", "blue") or None for default
+        
+    Returns:
+        dict: Information about the created object
+    """
+    try:
+        # Define available object types
+        object_types = {
+            "cereal": (Cereal, "breakfast_cereal.stl"),
+            "milk": (Milk, "milk.stl"),
+            "spoon": (Spoon, "spoon.stl"),
+            "bowl": (Bowl, "bowl.stl")
+        }
+        
+        # Default values
+        if object_choice is None:
+            object_choice = "bowl"
+            
+        if coordinates is None:
+            coordinates = [1.4, 1.0, 0.95]  # Default position
+            
+        # Parse coordinates
+        try:
+            pose_vals = [float(val) for val in coordinates]
+            if len(pose_vals) != 3:
+                return {"status": "error", "message": "Coordinates must have exactly 3 values (x,y,z)"}
+        except Exception as e:
+            return {"status": "error", "message": f"Error parsing coordinates: {str(e)}"}
+            
+        # Handle color
+        color_wrapper = ColorWrapper(color) if color else None
+        
+        # Create the object
+        if object_choice in object_types:
+            obj_ontology, obj_file = object_types[object_choice]
+            obj_name = object_choice  # Use the choice as the name
+        else:
+            # Custom/generic object
+            obj_name = object_choice
+            obj_ontology = ObjectType.GENERIC
+            obj_file = f"{object_choice}.stl"  # Assume filename matches object name
+            
+        # Create the object
+        try:
+            obj = Object(
+                obj_name, 
+                obj_ontology, 
+                obj_file, 
+                pose=Pose(pose_vals), 
+                color=color_wrapper
+            )
+            
+            print(f"API: Object '{obj_name}' created at pose {pose_vals} with color {color if color else 'default'}.")
+            
+            return {
+                "status": "success",
+                "message": f"Object '{obj_name}' created successfully",
+                "object": {
+                    "name": obj_name,
+                    "type": str(obj_ontology),
+                    "file": obj_file,
+                    "pose": pose_vals,
+                    "color": color if color else "default"
+                }
+            }
+        except FileNotFoundError as e:
+            return {"status": "error", "message": f"File not found: {str(e)}"}
+        except Exception as e:
+            return {"status": "error", "message": f"Error creating object: {str(e)}"}
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)} 
+
+
+Now here is a system prompt:
+   system_message = SystemMessage(
+            content=(
+                "You are an advanced AI assistant capable of answering questions and using tools when needed. "
+                "IMPORTANT: You MUST use available tools instead of answering from memory when applicable. "
+                "\n\n1. For ANY questions about circles (area, circumference, radius, diameter), use the CircleCalculator tool."
+                "\n\n2. For robot control commands, use the RobotControl tool. For example:"
+                "\n- To move the robot: RobotControl with command='move_robot' and appropriate parameters"
+                "\n- To pick up an object: RobotControl with command='pickup_and_place' and appropriate parameters"
+                "\n- To detect objects: RobotControl with command='detect_object' with appropriate parameters"
+                "\n\n3. To get a list of all available robot commands, use the ListRobotCommands tool."
+                "\n\nDo not say phrases like 'I will calculate' or 'Let me use the tool' - just USE the tool directly."
+                "\n\nWhen a user asks you to perform a robot action, determine which command is needed and call the appropriate API."
+            )
+        )
+
+
+Based on the parameters used lets improve our system prompt
+What ideas do you have?
+
+How can we improve the system prompts?
+
+And here as well is the HTML to show how there API is used:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Robot Control Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .command-panel {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #fff;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .api-log {
+            color: #0066cc;
+            font-weight: bold;
+        }
+        .api-error {
+            color: #cc0000;
+            font-weight: bold;
+        }
+        .api-success {
+            color: #00aa00;
+            font-weight: bold;
+        }
+        .server-config {
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #b0d0e0;
+        }
+        .connection-status {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .connected {
+            color: green;
+        }
+        .disconnected {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Robot Control Panel</h1>
+
+    <!-- Server Configuration -->
+    <div class="server-config">
+        <h2>Server Connection</h2>
+        <div style="display: flex; align-items: center;">
+            <div style="flex-grow: 1;">
+                <label for="serverAddress">API Server Address:</label>
+                <input type="text" id="serverAddress" value="http://localhost:8001" placeholder="http://server-ip:8001">
+            </div>
+            <div style="margin-left: 10px;">
+                <button id="testConnection">Test Connection</button>
+            </div>
+        </div>
+        <div>
+            <span id="connectionStatus" class="connection-status disconnected">Not connected</span>
+        </div>
+    </div>
+
+    <div id="result" class="result">Results will appear here...</div>
+
+    <!-- Move Robot -->
+    <div class="command-panel">
+        <h2>Move Robot</h2>
+        <form id="moveRobotForm">
+            <label for="moveX">X Coordinate:</label>
+            <input type="number" id="moveX" step="0.01" value="1.0">
+            
+            <label for="moveY">Y Coordinate:</label>
+            <input type="number" id="moveY" step="0.01" value="1.0">
+            
+            <label for="moveZ">Z Coordinate:</label>
+            <input type="number" id="moveZ" step="0.01" value="0.0">
+            
+            <button type="submit">Move Robot</button>
+        </form>
+    </div>
+
+    <!-- Spawn Objects -->
+    <div class="command-panel">
+        <h2>Spawn Objects</h2>
+        <form id="spawnObjectsForm">
+            <label for="objectChoice">Object Type:</label>
+            <select id="objectChoice">
+                <option value="cereal">Cereal</option>
+                <option value="milk">Milk</option>
+                <option value="spoon">Spoon</option>
+                <option value="bowl">Bowl</option>
+            </select>
+            
+            <label for="objectX">X Coordinate:</label>
+            <input type="number" id="objectX" step="0.01" value="1.4">
+            
+            <label for="objectY">Y Coordinate:</label>
+            <input type="number" id="objectY" step="0.01" value="1.0">
+            
+            <label for="objectZ">Z Coordinate:</label>
+            <input type="number" id="objectZ" step="0.01" value="0.95">
+            
+            <label for="objectColor">Color:</label>
+            <select id="objectColor">
+                <option value="">Default</option>
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+                <option value="yellow">Yellow</option>
+                <option value="white">White</option>
+                <option value="black">Black</option>
+            </select>
+            
+            <button type="submit">Spawn Object</button>
+        </form>
+    </div>
+
+    <!-- Pickup and Place -->
+    <div class="command-panel">
+        <h2>Pickup and Place</h2>
+        <form id="pickupPlaceForm">
+            <label for="pickupObjectName">Object Name:</label>
+            <input type="text" id="pickupObjectName" value="cereal">
+            
+            <label for="placeX">Target X Coordinate:</label>
+            <input type="number" id="placeX" step="0.01" value="1.4">
+            
+            <label for="placeY">Target Y Coordinate:</label>
+            <input type="number" id="placeY" step="0.01" value="0.5">
+            
+            <label for="placeZ">Target Z Coordinate:</label>
+            <input type="number" id="placeZ" step="0.01" value="0.95">
+            
+            <label for="pickupArm">Arm to Use:</label>
+            <select id="pickupArm">
+                <option value="">Automatic</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+            </select>
+            
+            <button type="submit">Pickup and Place</button>
+        </form>
+        <div id="outputArea"></div>
+    </div>
+
+    <!-- Robot Perceive -->
+    <div class="command-panel">
+        <h2>Robot Perceive</h2>
+        <form id="perceiveForm">
+            <label for="perceptionArea">Perception Area:</label>
+            <input type="text" id="perceptionArea" value="table">
+            
+            <button type="submit">Perceive</button>
+        </form>
+    </div>
+
+    <!-- Look for Object -->
+    <div class="command-panel">
+        <h2>Look for Object</h2>
+        <form id="lookForForm">
+            <label for="lookForObjectName">Object Name:</label>
+            <input type="text" id="lookForObjectName" value="cup1">
+            
+            <button type="submit">Look for Object</button>
+        </form>
+    </div>
+
+    <!-- Unpack Arms -->
+    <div class="command-panel">
+        <h2>Unpack Arms</h2>
+        <form id="unpackArmsForm">
+            <button type="submit">Unpack Arms</button>
+        </form>
+    </div>
+
+    <!-- Detect Object -->
+    <div class="command-panel">
+        <h2>Detect Object</h2>
+        <form id="detectObjectForm">
+            <label for="objectTypeDetect">Object Type:</label>
+            <input type="text" id="objectTypeDetect" value="cup">
+            
+            <label for="detectionArea">Detection Area:</label>
+            <input type="text" id="detectionArea" value="table">
+            
+            <button type="submit">Detect Object</button>
+        </form>
+    </div>
+
+    <!-- Transport Object -->
+    <div class="command-panel">
+        <h2>Transport Object</h2>
+        <form id="transportForm">
+            <label for="transportObjectName">Object Name:</label>
+            <input type="text" id="transportObjectName" value="cup1">
+            
+            <label for="transportX">Target X Coordinate:</label>
+            <input type="number" id="transportX" step="0.01" value="0.5">
+            
+            <label for="transportY">Target Y Coordinate:</label>
+            <input type="number" id="transportY" step="0.01" value="0.5">
+            
+            <label for="transportZ">Target Z Coordinate:</label>
+            <input type="number" id="transportZ" step="0.01" value="0.8">
+            
+            <button type="submit">Transport Object</button>
+        </form>
+    </div>
+
+    <script>
+        // Server address - automatically use current host if served directly
+        let defaultApiUrl;
+        
+        // Check if we're being served from our own server
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // We're on a remote device - use the current host
+            defaultApiUrl = window.location.protocol + '//' + window.location.host + '/execute';
+        } else {
+            // Default for local development
+            defaultApiUrl = 'http://localhost:8001/execute';
+        }
+        
+        let API_URL = defaultApiUrl;
+        const resultDiv = document.getElementById('result');
+        const serverAddressInput = document.getElementById('serverAddress');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const testConnectionBtn = document.getElementById('testConnection');
+        
+        // Set initial value based on detection
+        serverAddressInput.value = defaultApiUrl;
+        
+        // Update API URL when server address changes
+        serverAddressInput.addEventListener('change', updateApiUrl);
+        
+        function updateApiUrl() {
+            let serverAddress = serverAddressInput.value.trim();
+            if (!serverAddress.endsWith('/execute')) {
+                // Make sure we handle both with and without trailing slash
+                if (serverAddress.endsWith('/')) {
+                    serverAddress = serverAddress + 'execute';
+                } else {
+                    serverAddress = serverAddress + '/execute';
+                }
+            }
+            API_URL = serverAddress;
+            console.log("API URL updated to:", API_URL);
+        }
+        
+        // Test connection button
+        testConnectionBtn.addEventListener('click', async function() {
+            updateApiUrl();
+            connectionStatus.textContent = "Testing connection...";
+            connectionStatus.className = "connection-status";
+            
+            try {
+                // Try to get commands list as a simple test
+                const testUrl = API_URL.replace('/execute', '/commands');
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    connectionStatus.textContent = "Connected ✓";
+                    connectionStatus.className = "connection-status connected";
+                    resultDiv.innerHTML = `<span class="api-success">Successfully connected to the server!</span><br><br>Available commands:<br>${formatJsonOutput(data)}`;
+                } else {
+                    connectionStatus.textContent = "Error: " + response.statusText;
+                    connectionStatus.className = "connection-status disconnected";
+                    resultDiv.innerHTML = `<span class="api-error">Error connecting to server: ${response.status} ${response.statusText}</span>`;
+                }
+            } catch (error) {
+                connectionStatus.textContent = "Failed to connect";
+                connectionStatus.className = "connection-status disconnected";
+                resultDiv.innerHTML = `<span class="api-error">Could not connect to the server at ${API_URL.replace('/execute', '')}<br>Error: ${error.message}</span><br><br>Please check:
+                <ul>
+                    <li>Is the server running?</li>
+                    <li>Is the address correct?</li>
+                    <li>Are both devices on the same network?</li>
+                    <li>Is port 8001 open in the firewall?</li>
+                </ul>`;
+            }
+        });
+        
+        // Helper function for API calls
+        async function callRobotApi(command, params) {
+            updateApiUrl(); // Always get the latest API URL
+            resultDiv.innerHTML = "<span class='api-log'>Executing command...</span>";
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        command: command,
+                        params: params
+                    }),
+                });
+                
+                // Update connection status based on response
+                if (response.ok) {
+                    connectionStatus.textContent = "Connected ✓";
+                    connectionStatus.className = "connection-status connected";
+                } else {
+                    connectionStatus.textContent = "Error: " + response.statusText;
+                    connectionStatus.className = "connection-status disconnected";
+                }
+                
+                const data = await response.json();
+                
+                // Format the response data with syntax highlighting
+                let formattedOutput = "";
+                
+                // Add status indicator
+                if (data.status === "success") {
+                    formattedOutput += `<span class="api-success">✓ SUCCESS:</span> ${data.message}<br><br>`;
+                } else if (data.status === "error") {
+                    formattedOutput += `<span class="api-error">✗ ERROR:</span> ${data.message}<br><br>`;
+                }
+                
+                // Add details of the response
+                formattedOutput += formatJsonOutput(data);
+                
+                resultDiv.innerHTML = formattedOutput;
+                return data;
+            } catch (error) {
+                connectionStatus.textContent = "Failed to connect";
+                connectionStatus.className = "connection-status disconnected";
+                resultDiv.innerHTML = `<span class="api-error">✗ ERROR: ${error.message}</span>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        // Function to format JSON with some basic syntax highlighting
+        function formatJsonOutput(json) {
+            const formatted = JSON.stringify(json, null, 2);
+            return formatted.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, 
+                function (match) {
+                    let cls = 'number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'key';
+                            return `<span style="color: #7a3e9d;">${match}</span>`;
+                        } else {
+                            cls = 'string';
+                            return `<span style="color: #2e7d32;">${match}</span>`;
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'boolean';
+                        return `<span style="color: #0277bd;">${match}</span>`;
+                    } else if (/null/.test(match)) {
+                        cls = 'null';
+                        return `<span style="color: #b71c1c;">${match}</span>`;
+                    } else {
+                        return `<span style="color: #0277bd;">${match}</span>`;
+                    }
+                }
+            );
+        }
+        
+        // Move Robot Form
+        document.getElementById('moveRobotForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const x = parseFloat(document.getElementById('moveX').value);
+            const y = parseFloat(document.getElementById('moveY').value);
+            const z = parseFloat(document.getElementById('moveZ').value);
+            
+            callRobotApi('move_robot', {
+                coordinates: [x, y, z]
+            });
+        });
+        
+        // Spawn Objects Form
+        document.getElementById('spawnObjectsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const objectChoice = document.getElementById('objectChoice').value;
+            const x = parseFloat(document.getElementById('objectX').value);
+            const y = parseFloat(document.getElementById('objectY').value);
+            const z = parseFloat(document.getElementById('objectZ').value);
+            const color = document.getElementById('objectColor').value;
+            
+            const params = {
+                object_choice: objectChoice,
+                coordinates: [x, y, z]
+            };
+            
+            if (color) {
+                params.color = color;
+            }
+            
+            callRobotApi('spawn_objects', params);
+        });
+        
+        // Pickup and Place Form
+        document.getElementById('pickupPlaceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const objectName = document.getElementById('pickupObjectName').value;
+            const x = parseFloat(document.getElementById('placeX').value);
+            const y = parseFloat(document.getElementById('placeY').value);
+            const z = parseFloat(document.getElementById('placeZ').value);
+            const arm = document.getElementById('pickupArm').value;
+            
+            callRobotApi('pickup_and_place', {
+                object_name: objectName,
+                target_location: [x, y, z],
+                arm: arm || null
+            });
+        });
+        
+        // Robot Perceive Form
+        document.getElementById('perceiveForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const area = document.getElementById('perceptionArea').value;
+            
+            callRobotApi('robot_perceive', {
+                perception_area: area
+            });
+        });
+        
+        // Look for Object Form
+        document.getElementById('lookForForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const objectName = document.getElementById('lookForObjectName').value;
+            
+            callRobotApi('look_for_object', {
+                object_name: objectName
+            });
+        });
+        
+        // Unpack Arms Form
+        document.getElementById('unpackArmsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            callRobotApi('unpack_arms', {});
+        });
+        
+        // Detect Object Form
+        document.getElementById('detectObjectForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const objectType = document.getElementById('objectTypeDetect').value;
+            const area = document.getElementById('detectionArea').value;
+            
+            callRobotApi('detect_object', {
+                object_type: objectType,
+                detection_area: area
+            });
+        });
+        
+        // Transport Object Form
+        document.getElementById('transportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const objectName = document.getElementById('transportObjectName').value;
+            const x = parseFloat(document.getElementById('transportX').value);
+            const y = parseFloat(document.getElementById('transportY').value);
+            const z = parseFloat(document.getElementById('transportZ').value);
+            
+            callRobotApi('transport_object', {
+                object_name: objectName,
+                target_location: [x, y, z]
+            });
+        });
+    </script>
+</body>
+</html> 
+
+
+SO lets make the right system prompt
