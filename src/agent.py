@@ -7,6 +7,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
+import utils
+
 
 class Agent:
     def __init__(
@@ -49,51 +51,6 @@ class Agent:
             verbose=verbose,
             handle_parsing_errors=handle_parsing_errors,
         )
-
-    def __get_robot_tool_params(command, k_args):
-        params = {}
-        coordinates = (
-            [
-                float(k_args["coordinates"][0]),
-                float(k_args["coordinates"][1]),
-                float(k_args["coordinates"][2]),
-            ]
-            if "coordinates" in k_args
-            else None
-        )
-
-        if command == "unpack_arms":
-            pass
-        elif command == "move_robot":
-            params["coordinates"] = coordinates
-        elif command == "look_for_object":
-            params["object_name"] = k_args["object_name"]
-        elif command == "robot_perceive":
-            if "perception_area" in k_args:
-                params["perception_area"] = k_args["perception_area"]
-        elif command == "detect_object":
-            params["object_type"] = k_args["object_type"]
-            if "detection_area" in k_args:
-                params["detection_area"] = k_args["detection_area"]
-        elif command == "pickup_and_place":
-            params["object_name"] = k_args["object_name"]
-            params["target_location"] = coordinates
-            if "arm" in k_args:
-                params["arm"] = k_args["arm"]
-        elif command == "transport_object":
-            params["object_name"] = k_args["object_name"]
-            params["coordinates"] = coordinates
-            if "arm" in k_args:
-                params["arm"] = k_args["arm"]
-        elif command == "spawn_objects":
-            params["object_choice"] = k_args["object_choice"]
-            params["coordinates"] = coordinates
-            if "color" in k_args:
-                params["color"] = k_args["color"]
-        else:
-            raise ValueError(f"ERROR: Unknown command '{command}'")
-
-        return params
 
     @staticmethod
     def _get_prompt_template(system_message_text, with_image=False):
@@ -180,14 +137,50 @@ class Agent:
             if "arm" in kwargs and kwargs["arm"] not in ["left", "right"]:
                 return "ERROR: arm takes the values: 'left' or 'right']"
 
-            try:
-                params = Agent.__get_robot_tool_params(command, kwargs)
-            except ValueError as e:
-                return e
+            coordinates = (
+                [
+                    float(kwargs["coordinates"][0]),
+                    float(kwargs["coordinates"][1]),
+                    float(kwargs["coordinates"][2]),
+                ]
+                if "coordinates" in kwargs
+                else None
+            )
+            command_params = utils.RobotToolDict(
+                "coordinates",
+                {
+                    "unpack_arms": [],
+                    "move_robot": [(coordinates, "coordinates")],
+                    "look_for_object": [(kwargs, "object_name")],
+                    "robot_perceive": [(kwargs, "perception_area")],
+                    "detect_object": [
+                        (kwargs, "object_type"),
+                        (kwargs, "detection_area"),
+                    ],
+                    "pickup_and_place": [
+                        (kwargs, "object_name"),
+                        (coordinates, "target_location"),
+                        (kwargs, "arm"),
+                    ],
+                    "transport_object": [
+                        (kwargs, "object_name"),
+                        (coordinates, "coordinates"),
+                        (kwargs, "arm"),
+                    ],
+                    "spawn_objects": [
+                        (kwargs, "object_choice"),
+                        (coordinates, "coordinates"),
+                        (kwargs, "color"),
+                    ],
+                },
+            )
+
+            if command not in command_params:
+                raise ValueError(f"ERROR: Unknown command '{command}'")
 
             response = requests.post(
                 api_url,
-                json={"command": command, "params": params},
+                json={"command": command, "params": command_params[command]},
                 timeout=requests_timeout,
             )
 

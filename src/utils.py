@@ -1,4 +1,5 @@
 import base64
+import collections
 import io
 
 
@@ -21,3 +22,24 @@ def get_base64_encoded_image(image, image_extension):
     image.save(buffer, "jpeg" if image_extension == "jpg" else image_extension)
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode("UTF-8")
+
+
+class RobotToolDict(collections.abc.Mapping):
+    def __init__(self, *special_keywords, **kwargs):
+        self.__special_keywords = special_keywords
+        self._dict = dict(**kwargs)
+
+    def __contains__(self, key):
+        return key in self._dict
+
+    def __getitem__(self, key):
+        items = self._dict.__getitem__(key)
+        params = {}
+
+        for k, v in items:
+            if v in self.__special_keywords:
+                params[v] = k
+            elif v in k:
+                params[v] = k[v]
+
+        return params
