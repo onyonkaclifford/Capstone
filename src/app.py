@@ -15,8 +15,9 @@ TEMPERATURE = float(os.getenv("TEMPERATURE"))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS"))
 IMAGE_MAX_WIDTH = int(os.getenv("IMAGE_MAX_WIDTH"))
 VERBOSE = os.getenv("VERBOSE").lower()
+LOGGER_NAME = os.getenv("LOGGER_NAME").lower()
 
-logger = logging.getLogger("capstone")
+logger = logging.getLogger(LOGGER_NAME)
 default_temperature = 0.7
 default_verbose = "true"
 
