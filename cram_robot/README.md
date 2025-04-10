@@ -14,7 +14,7 @@ selected:
     3. `Disable access control`
 4. Set required environment variables: `export DISPLAY=192.168.1.201; export SCREEN=0`. $DISPLAY is the host IP address
 and $SCREEN is the screen to use (by default $SCREEN is set to 0 unless the host has multiple screens).
-5. Run container: `docker run -d -e DISPLAY=$DISPLAY:$SCREEN -v </path/to/RoboCRAM/dir>:/home/capstone/src --name cram_robot cram_robot`.
+5. Run container: `docker run -dp 8001:8001 -e DISPLAY=$DISPLAY:$SCREEN -v </path/to/RoboCRAM/dir>:/home/capstone/src --name cram_robot cram_robot`.
 If a container already exists but is stopped, run `docker start cram_robot` to restart it instead of running a new
 container.
 6. Run CRAM robot (take note of the IMPORTANT section below before proceeding with this step):

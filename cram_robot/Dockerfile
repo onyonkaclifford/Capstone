@@ -67,4 +67,7 @@ RUN sudo apt-get update \
 # PyCRAM port
 EXPOSE 11311
 
+# HTTP API port
+EXPOSE 8001
+
 CMD ["python3", "-c", "while True: continue"]
