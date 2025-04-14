@@ -25,7 +25,9 @@ container.
 > On the first run of a new docker container, follow the steps below before running PyCRAM:
 
 1. Exec into container: `docker exec -it cram_robot bash`
-2. Navigate to workspace: `cd /home/capstone/workspace/ros`
-3. Build workspace: `catkin build`
-4. Source required script: `source /home/capstone/workspace/ros/devel/setup.bash`
-5. Set automatic sourcing of required script: `echo "source /home/capstone/workspace/ros/devel/setup.bash" >> /home/capstone/.bashrc`
+2. Navigate to PyCRAM directory: `cd /home/capstone/workspace/ros/src/pycram`
+3. Checkout the exact commit hash that we are working with: `git checkout 3e21535d633b7e2c668edac5f020e0cdc1565e07`
+4. Navigate to the ROS workspace: `cd /home/capstone/workspace/ros/src/pycram`
+5. Build workspace: `catkin build`
+6. Source required script: `source /home/capstone/workspace/ros/devel/setup.bash`
+7. Set automatic sourcing of required script: `echo "source /home/capstone/workspace/ros/devel/setup.bash" >> /home/capstone/.bashrc`
