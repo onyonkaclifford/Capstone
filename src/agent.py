@@ -120,15 +120,18 @@ class Agent:
             if command is None:
                 return "Please specify a robot command"
 
-            [kwargs.pop(k) for k, v in kwargs.items() if v is None]
-            for k, v in required_command_parameters.items():
-                if False in [i in kwargs for i in v]:
+            # [kwargs.pop(k) for k, v in kwargs.items() if v is None]
+            kwargs = {k: v for k, v in kwargs.items() if v is not None}
+            if command in required_command_parameters:
+                missing_params = [param for param in required_command_parameters[command] 
+                                if param not in kwargs]
+                if missing_params:
                     return (
-                        f"ERROR: {k} command requires these missing parameters: {', '.join(v)}. "
+                        f"ERROR: {command} command requires these missing parameters: {', '.join(missing_params)}. "
                         "Make sure to pass them explicitly by name. "
                         "When passing coordinates, use the format 'coordinates=[x, y, z]'."
                     )
-
+            
             if "coordinates" in kwargs and (
                 not isinstance(kwargs["coordinates"], list)
                 or not len(kwargs["coordinates"]) == 3
