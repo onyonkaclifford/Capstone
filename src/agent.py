@@ -81,6 +81,7 @@ class Agent:
             description="Use this tool when asked who you are or about your identity",
         )
 
+
     @staticmethod
     def _get_robot_tool(pycram_api_host, requests_timeout):
         def robot_api_tool(
@@ -96,8 +97,12 @@ class Agent:
             detection_area: str = None,
             **kwargs,
         ):
-            api_url = f"{pycram_api_host}/execute"
-            kwargs |= {
+            # Check if command is provided
+            if command is None:
+                return "Please specify a robot command"
+                
+            # Collect all parameters into kwargs for easier handling
+            all_params = {
                 "coordinates": coordinates,
                 "object_name": object_name,
                 "target_location": target_location,
@@ -108,91 +113,100 @@ class Agent:
                 "object_type": object_type,
                 "detection_area": detection_area,
             }
-            required_command_parameters = {
+            
+            # Add any additional kwargs
+            all_params.update(kwargs)
+            
+            # Remove None values
+            all_params = {k: v for k, v in all_params.items() if v is not None}
+            
+            # Define required parameters for each command
+            required_params = {
                 "move_robot": ["coordinates"],
                 "pickup_and_place": ["object_name", "target_location"],
                 "transport_object": ["object_name", "target_location"],
                 "spawn_objects": ["object_choice", "coordinates"],
                 "look_for_object": ["object_name"],
                 "detect_object": ["object_type"],
+                "unpack_arms": [],  # No required params
             }
-
-            if command is None:
-                return "Please specify a robot command"
-
-            # [kwargs.pop(k) for k, v in kwargs.items() if v is None]
-            kwargs = {k: v for k, v in kwargs.items() if v is not None}
-            if command in required_command_parameters:
-                missing_params = [param for param in required_command_parameters[command] 
-                                if param not in kwargs]
-                if missing_params:
-                    return (
-                        f"ERROR: {command} command requires these missing parameters: {', '.join(missing_params)}. "
-                        "Make sure to pass them explicitly by name. "
-                        "When passing coordinates, use the format 'coordinates=[x, y, z]'."
-                    )
             
-            if "coordinates" in kwargs and (
-                not isinstance(kwargs["coordinates"], list)
-                or not len(kwargs["coordinates"]) == 3
-            ):
-                return "ERROR: coordinates must be a list of exactly 3 values [x, y, z]"
-            if "arm" in kwargs and kwargs["arm"] not in ["left", "right"]:
+            # Check if command is valid
+            if command not in required_params:
+                return f"ERROR: Unknown command '{command}'"
+                
+            # Check for required parameters
+            missing = [
+                p for p in required_params[command] 
+                if p not in all_params
+            ]
+            if missing:
+                return (
+                    f"ERROR: {command} command requires these missing parameters: {', '.join(missing)}. "
+                    "Make sure to pass them explicitly by name."
+                )
+                
+            # Validate parameter types and values
+            if "coordinates" in all_params:
+                if not isinstance(all_params["coordinates"], list) or len(all_params["coordinates"]) != 3:
+                    return "ERROR: coordinates must be a list of exactly 3 values [x, y, z]"
+                # Convert to float
+                all_params["coordinates"] = [float(c) for c in all_params["coordinates"]]
+                
+            if "arm" in all_params and all_params["arm"] not in ["left", "right"]:
                 return "ERROR: arm takes the values: 'left' or 'right']"
-
-            coordinates = (
-                [
-                    float(kwargs["coordinates"][0]),
-                    float(kwargs["coordinates"][1]),
-                    float(kwargs["coordinates"][2]),
-                ]
-                if "coordinates" in kwargs
-                else None
-            )
-            command_params = utils.RobotToolDict(
-                "coordinates",
-                {
-                    "unpack_arms": [],
-                    "move_robot": [(coordinates, "coordinates")],
-                    "look_for_object": [(kwargs, "object_name")],
-                    "robot_perceive": [(kwargs, "perception_area")],
-                    "detect_object": [
-                        (kwargs, "object_type"),
-                        (kwargs, "detection_area"),
-                    ],
-                    "pickup_and_place": [
-                        (kwargs, "object_name"),
-                        (coordinates, "target_location"),
-                        (kwargs, "arm"),
-                    ],
-                    "transport_object": [
-                        (kwargs, "object_name"),
-                        (coordinates, "coordinates"),
-                        (kwargs, "arm"),
-                    ],
-                    "spawn_objects": [
-                        (kwargs, "object_choice"),
-                        (coordinates, "coordinates"),
-                        (kwargs, "color"),
-                    ],
-                },
-            )
-
-            if command not in command_params:
-                raise ValueError(f"ERROR: Unknown command '{command}'")
-
+                
+            # Prepare params for specific commands
+            api_params = {}
+            
+            if command == "move_robot":
+                api_params["coordinates"] = all_params["coordinates"]
+                
+            elif command == "pickup_and_place":
+                api_params["object_name"] = all_params["object_name"]
+                api_params["target_location"] = all_params["target_location"]
+                if "arm" in all_params:
+                    api_params["arm"] = all_params["arm"]
+                    
+            elif command == "transport_object":
+                api_params["object_name"] = all_params["object_name"]
+                api_params["target_location"] = all_params["target_location"]
+                if "arm" in all_params:
+                    api_params["arm"] = all_params["arm"]
+                    
+            elif command == "spawn_objects":
+                api_params["object_choice"] = all_params["object_choice"]
+                api_params["coordinates"] = all_params["coordinates"]
+                if "color" in all_params:
+                    api_params["color"] = all_params["color"]
+                    
+            elif command == "look_for_object":
+                api_params["object_name"] = all_params["object_name"]
+                
+            elif command == "detect_object":
+                api_params["object_type"] = all_params["object_type"]
+                if "detection_area" in all_params:
+                    api_params["detection_area"] = all_params["detection_area"]
+                    
+            elif command == "robot_perceive":
+                if "perception_area" in all_params:
+                    api_params["perception_area"] = all_params["perception_area"]
+                    
+            # Make API call
+            api_url = f"{pycram_api_host}/execute"
             response = requests.post(
                 api_url,
-                json={"command": command, "params": command_params[command]},
+                json={"command": command, "params": api_params},
                 timeout=requests_timeout,
             )
-
+            
+            # Process response
             if response.status_code == 200:
                 result = response.json()
                 return json.dumps(result)
             else:
                 return f"API error: {response.status_code} - {response.text}"
-
+                
         return StructuredTool.from_function(
             func=robot_api_tool,
             name="RobotControl",
@@ -206,12 +220,10 @@ class Agent:
                 "- unpack_arms: no parameters required\n"
                 "- detect_object: object_type, detection_area (optional)\n"
                 "- transport_object: object_name, target_location=[x, y, z], arm (optional: 'left' or 'right')\n\n"
-                "IMPORTANT: Always specify parameters explicitly by name in the function call. For example, use:\n"
-                "command='move_robot', coordinates=[x, y, z]\n"
-                "and NOT just command='move_robot' with coordinates in a separate parameter."
+                "IMPORTANT: Always specify parameters explicitly by name in the function call."
             ),
         )
-
+ 
     @staticmethod
     def _get_robot_commands_tool(pycram_api_host, requests_timeout):
         def list_robot_commands():
