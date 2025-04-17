@@ -6,6 +6,11 @@ import json
 import requests
 from typing import Dict, Any
 
+# orientation = euler_to_quaternion(0, 0, 120)
+import os
+import base64
+from datetime import datetime
+
 from .command_handlers import (
     MoveRobotHandler, PickupAndPlaceHandler, TransportObjectHandler,
     SpawnObjectsHandler, LookForObjectHandler, DetectObjectHandler,
@@ -90,7 +95,7 @@ class RobotAPI:
             return self._make_api_call(request_data["command"], request_data["params"])
         except Exception as e:
             return f"ERROR: Command execution failed: {str(e)}"
-    
+        
     def _make_api_call(self, command: str, params: Dict[str, Any]) -> str:
         """Make the actual API call"""
         print(f"Making API call to {self.api_host} with command: {command} and params: {params}")
@@ -105,11 +110,26 @@ class RobotAPI:
             # Process response
             if response.status_code == 200:
                 result = response.json()
+                # print(f"API response: {result}")
+                # check if the command was get_camera_images or get_enhanced_camera_images
+                if command in ["get_camera_images", "get_enhanced_camera_images"]:
+                    try:
+                        image_dir, saved_files = RobotAPI.save_images_from_response(result)
+                        result["image_dir"] = image_dir
+                        result["saved_files"] = saved_files
+                        # return image location as json with imageurl
+                        img_url = image_dir
+                        result["image_url"] = img_url
+                    except Exception as e:
+                        return f"ERROR: Failed to save images: {str(e)}"
+
                 return json.dumps(result)
             else:
                 return f"API error: {response.status_code} - {response.text}"
         except requests.exceptions.RequestException as e:
             return f"Request error: {str(e)}"
+    
+    
     
     def get_commands_list(self) -> str:
         """Get a list of all available commands with descriptions"""
@@ -124,3 +144,61 @@ class RobotAPI:
             })
         
         return json.dumps({"commands": command_info})
+    
+    @staticmethod
+    def save_images_from_response(result: dict, image_dir: str = "enhanced_images") -> (str, list):
+        """
+        Given an API response dict with structure:
+        {
+            "status": "success",
+            "images": {
+            "color_image": "<base64…>",
+            "depth_image": "<base64…>",
+            …
+            },
+            "message": "…"
+        }
+        this function:
+        1. Verifies success.
+        2. Creates `image_dir` if needed.
+        3. Saves each image under a timestamped filename.
+        4. Returns (directory_path, [list of saved file paths]).
+
+        Args:
+            result:    The dict returned by response.json().
+            image_dir: Directory to save images into.
+
+        Returns:
+            A tuple (image_dir, saved_files), where:
+            - image_dir is the directory you passed in (created if needed).
+            - saved_files is a list of the full file paths you wrote.
+        """
+        # # 1) Check status
+        # if result.get("status") != "success":
+        #     raise ValueError(f"API error: {result.get('message', 'unknown error')}")
+
+        # 2) Make directory
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir, exist_ok=True)
+
+        # 3) Timestamp for filenames
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        saved_files = []
+        for img_type, img_b64 in result.get("images", {}).items():
+            # Decode base64
+            img_bytes = base64.b64decode(img_b64)
+
+            # Build filename
+            filename = os.path.join(image_dir, f"{timestamp}_{img_type}.png")
+
+            # Write to disk
+            with open(filename, "wb") as f:
+                f.write(img_bytes)
+
+            saved_files.append(filename)
+            print(f"Saved {img_type} to {filename}")
+
+        return image_dir, saved_files
+    
+    
