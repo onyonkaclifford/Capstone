@@ -77,7 +77,7 @@ class Agent:
             ]
         )
 
-    @staticmethod  
+    @staticmethod
     def _get_hello_tool():
         """Returns a simple tool that greets the user."""
         return StructuredTool.from_function(
@@ -89,12 +89,12 @@ class Agent:
     def handle_message(self, message_text, base64_images, base64_images_mimes):
         """
         Process a user message and optional image input.
-        
+
         Args:
             message_text: The text message from the user
             base64_images: List of base64 encoded images
             base64_images_mimes: List of mime types for the images
-            
+
         Returns:
             The AI's response as a string
         """
@@ -103,7 +103,7 @@ class Agent:
         print("=====================================")
         print("Processing new input message...")
         print(f"Received message: {message_text}")
-        
+
         # Process image if available
         image_url = (
             None
