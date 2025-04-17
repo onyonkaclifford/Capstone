@@ -8,3 +8,6 @@ __pycache__/
 venv/
 
 .env
+
+# addd the enhanced_images folder to the gitignore file
+enhanced_images/
