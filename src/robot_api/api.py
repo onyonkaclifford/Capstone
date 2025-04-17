@@ -93,6 +93,7 @@ class RobotAPI:
     
     def _make_api_call(self, command: str, params: Dict[str, Any]) -> str:
         """Make the actual API call"""
+        print(f"Making API call to {self.api_host} with command: {command} and params: {params}")
         api_url = f"{self.api_host}/execute"
         try:
             response = requests.post(
