@@ -73,8 +73,9 @@ class Agent:
             ]
         )
 
-    @staticmethod
+    @staticmethod  
     def _get_hello_tool():
+        # Returns a simple tool that greets the user.
         return StructuredTool.from_function(
             func=lambda: "Hello I am RoboCRAM. How can I help?",
             name="Hello",
@@ -241,6 +242,14 @@ class Agent:
         )
 
     def handle_message(self, message_text, base64_images, base64_images_mimes):
+
+        # add a line/marjer to show begining onew printput
+        print("")
+        print("=====================================")
+        print("Processing new input message...")
+
+        # print the text captured in the input
+        print(f"Received message: {message_text}")
         image_url = (
             None
             if len(base64_images) == 0
