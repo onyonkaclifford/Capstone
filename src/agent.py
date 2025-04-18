@@ -29,7 +29,7 @@ class Agent:
     ):
         self._chat_history = []
         self.pdf_directory = pdf_directory
-        self.embedding_model = OpenAIEmbeddings(openai_api_key="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")
+        self.embedding_model = OpenAIEmbeddings(openai_api_key="your key here")
         self.vector_store = Chroma(
             collection_name="pdf_docs",
             embedding_function=self.embedding_model,
