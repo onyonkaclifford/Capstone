@@ -96,6 +96,37 @@ class RobotAPI:
         except Exception as e:
             return f"ERROR: Command execution failed: {str(e)}"
         
+    # def _make_api_call(self, command: str, params: Dict[str, Any]) -> str:
+    #     """Make the actual API call"""
+    #     print(f"Making API call to {self.api_host} with command: {command} and params: {params}")
+    #     api_url = f"{self.api_host}/execute"
+    #     try:
+    #         response = requests.post(
+    #             api_url,
+    #             json={"command": command, "params": params},
+    #             timeout=self.timeout,
+    #         )
+            
+    #         # Process response
+    #         if response.status_code == 200:
+    #             result = response.json()
+    #             # print(f"API response: {result}")
+    #             # check if the command was get_camera_images or get_enhanced_camera_images
+    #             if command in ["get_camera_images", "get_enhanced_camera_images"]:
+    #                 try:
+    #                     image_dir, saved_files = RobotAPI.save_images_from_response(result)
+    #                     result["image_dir"] = image_dir
+    #                     img_url = image_dir
+    #                     result["image_url"] = saved_files[0] if saved_files else None
+    #                 except Exception as e:
+    #                     return f"ERROR: Failed to save images: {str(e)}"
+
+    #             return json.dumps(result)
+    #         else:
+    #             return f"API error: {response.status_code} - {response.text}"
+    #     except requests.exceptions.RequestException as e:
+    #         return f"Request error: {str(e)}"
+    
     def _make_api_call(self, command: str, params: Dict[str, Any]) -> str:
         """Make the actual API call"""
         print(f"Making API call to {self.api_host} with command: {command} and params: {params}")
@@ -116,10 +147,23 @@ class RobotAPI:
                     try:
                         image_dir, saved_files = RobotAPI.save_images_from_response(result)
                         result["image_dir"] = image_dir
-                        result["saved_files"] = saved_files
-                        # return image location as json with imageurl
-                        img_url = image_dir
-                        result["image_url"] = img_url
+                        
+                        # Replace base64 images with URLs to saved files
+                        if "images" in result and saved_files:
+                            image_types = list(result["images"].keys())
+                            result["image_urls"] = {}
+                            
+                            # Create a mapping between image types and their file paths
+                            for i, img_type in enumerate(image_types):
+                                if i < len(saved_files):
+                                    result["image_urls"][img_type] = saved_files[i]
+                            
+                            # Remove the original base64 data to reduce payload size
+                            del result["images"]
+                            
+                        # Keep the first image URL for backward compatibility
+                        result["image_url"] = saved_files[0] if saved_files else None
+                        
                     except Exception as e:
                         return f"ERROR: Failed to save images: {str(e)}"
 
@@ -128,7 +172,6 @@ class RobotAPI:
                 return f"API error: {response.status_code} - {response.text}"
         except requests.exceptions.RequestException as e:
             return f"Request error: {str(e)}"
-    
     
     
     def get_commands_list(self) -> str:
