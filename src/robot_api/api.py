@@ -95,7 +95,7 @@ class RobotAPI:
             return self._make_api_call(request_data["command"], request_data["params"])
         except Exception as e:
             return f"ERROR: Command execution failed: {str(e)}"
-        
+
     def _make_api_call(self, command: str, params: Dict[str, Any]) -> str:
         """Make the actual API call"""
         print(f"Making API call to {self.api_host} with command: {command} and params: {params}")
@@ -117,33 +117,22 @@ class RobotAPI:
                         image_dir, saved_files = RobotAPI.save_images_from_response(result)
                         result["image_dir"] = image_dir
                         
-                        # Replace base64 images with URLs to saved files
+                        # Store only the file paths - no need for data URLs
                         if "images" in result and saved_files:
                             image_types = list(result["images"].keys())
                             result["image_urls"] = {}
-                            result["image_data_urls"] = {}
                             
                             # Create a mapping between image types and their file paths
                             for i, img_type in enumerate(image_types):
                                 if i < len(saved_files):
-                                    # Store the file path for reference
                                     result["image_urls"][img_type] = saved_files[i]
-                                    
-                                    # Read the image and convert to data URL for display
-                                    with open(saved_files[i], "rb") as img_file:
-                                        img_content = img_file.read()
-                                        img_b64 = base64.b64encode(img_content).decode("utf-8")
-                                        mime_type = "image/png"  # Adjust if you save different formats
-                                        result["image_data_urls"][img_type] = f"data:{mime_type};base64,{img_b64}"
                             
                             # Remove the original base64 data to reduce payload size
                             del result["images"]
                             
-                        # Keep the first image data URL for backward compatibility
-                        if saved_files and "image_data_urls" in result and len(result["image_data_urls"]) > 0:
-                            result["image_url"] = result["image_data_urls"][list(result["image_data_urls"].keys())[0]]
-                        else:
-                            result["image_url"] = None
+                        # Keep the first image path for backward compatibility
+                        if saved_files:
+                            result["image_path"] = saved_files[0]
                         
                     except Exception as e:
                         return f"ERROR: Failed to save or process images: {str(e)}"
@@ -153,8 +142,7 @@ class RobotAPI:
                 return f"API error: {response.status_code} - {response.text}"
         except requests.exceptions.RequestException as e:
             return f"Request error: {str(e)}"
-    
-    
+
     def get_commands_list(self) -> str:
         """Get a list of all available commands with descriptions"""
         command_info = []

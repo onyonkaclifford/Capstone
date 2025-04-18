@@ -69,25 +69,37 @@ agent = Agent(
     True if VERBOSE == "true" else False,
 )
 
-# Add a function to extract image data URLs from text
-def extract_data_urls(text):
-    """Extract data URLs from text content"""
-    # Pattern to match data URLs in Markdown image syntax or in a JSON string
-    pattern = r'(data:image\/[^;]+;base64,[a-zA-Z0-9+/=]+)'
-    return re.findall(pattern, text)
+
 
 @cl.on_chat_start
 async def on_start():
     await cl.Message(content="I am ready ...").send()
 
+# Your existing code...
+
+# Update the extraction function to find both data URLs and file paths
+def extract_image_references(text):
+    """Extract both data URLs and file paths from text content"""
+    # Data URL pattern
+    data_url_pattern = r'(data:image\/[^;]+;base64,[a-zA-Z0-9+/=]+)'
+    data_urls = re.findall(data_url_pattern, text)
+    
+    # File path pattern - look for image file paths in markdown syntax or JSON
+    file_path_pattern = r'!\[.*?\]\((.*?\.png)\)|"image_urls":\s*{\s*"[^"]+"\s*:\s*"([^"]+\.png)"'
+    file_paths = []
+    for match in re.findall(file_path_pattern, text):
+        # Each match could be from different capture groups
+        for path in match:
+            if path and path.endswith('.png'):
+                # Convert backslashes to forward slashes for consistency
+                file_paths.append(path.replace('\\', '/'))
+    
+    return {"data_urls": data_urls, "file_paths": file_paths}
 
 @cl.on_message
 async def main(message: cl.Message):
     """Process incoming messages"""
     try:
-        # Log the start of processing
-        print("Processing message:", message.content)
-        
         # Extract any images the user might have sent
         images = []
         images_mimes = []
@@ -107,55 +119,50 @@ async def main(message: cl.Message):
             images_mimes
         )
         
-        # Check if response contains image data URLs
-        data_urls = extract_data_urls(agent_response)
-        print(f"Found {len(data_urls)} image data URLs in response")
-        
-        # Create response message with original text first
+        # Create initial response message
         response_message = cl.Message(content=agent_response)
         
-        # Process any found data URLs
-        if data_urls:
-            cleaned_content = agent_response
-            
-            for i, data_url in enumerate(data_urls):
-                try:
-                    # Extract the base64 part
-                    if "base64," in data_url:
-                        base64_part = data_url.split("base64,")[1]
-                        
-                        # Create a temporary file with proper extension
-                        temp_dir = tempfile.gettempdir()
-                        temp_filename = f"temp_image_{i}.png"
-                        temp_path = os.path.join(temp_dir, temp_filename)
-                        
-                        print(f"Creating temp file at: {temp_path}")
-                        
-                        # Decode and save the image
-                        with open(temp_path, "wb") as img_file:
-                            img_file.write(base64.b64decode(base64_part))
-                        
-                        # Add image to the message as an element
-                        image_element = cl.Image(path=temp_path, display="inline")
-                        response_message.elements.append(image_element)
-                        
-                        # Clean the response text to remove embedded images
-                        for pattern in [
-                            f"!\\[.*?\\]\\({re.escape(data_url)}\\)",  # Markdown image syntax with any alt text
-                            re.escape(data_url)  # Just the URL itself
-                        ]:
-                            cleaned_content = re.sub(pattern, "", cleaned_content)
-                
-                except Exception as e:
-                    print(f"Error processing image {i}: {str(e)}")
-            
-            # Update with cleaned content
-            response_message.content = cleaned_content.strip()
+        # Look for image paths in the response
+        image_paths = []
         
-        # Send the message
-        print("Sending response message")
+        # Method 1: Check for Markdown image syntax with local paths
+        markdown_images = re.findall(r'!\[(.*?)\]\((enhanced_images[/\\][^)]+\.png)\)', agent_response)
+        for _, img_path in markdown_images:
+            image_paths.append(img_path.replace('\\', '/'))
+        
+        # Method 2: Look for image_urls or image_path in JSON response
+        try:
+            json_match = re.search(r'({.*?(?:"image_urls"|"image_path").*?})', agent_response)
+            if json_match:
+                json_data = json.loads(json_match.group(1))
+                if "image_urls" in json_data and isinstance(json_data["image_urls"], dict):
+                    for img_type, img_path in json_data["image_urls"].items():
+                        image_paths.append(img_path.replace('\\', '/'))
+                elif "image_path" in json_data:
+                    image_paths.append(json_data["image_path"].replace('\\', '/'))
+        except:
+            pass  # JSON parsing might fail, that's okay
+        
+        # Method 3: Direct regex for file paths
+        direct_paths = re.findall(r'enhanced_images[/\\][^\s"\']+\.png', agent_response)
+        for path in direct_paths:
+            if path not in image_paths:
+                image_paths.append(path.replace('\\', '/'))
+        
+        # Add found images to the message
+        for image_path in image_paths:
+            if os.path.exists(image_path):
+                # Create image element with the file path
+                image_element = cl.Image(
+                    name=os.path.basename(image_path),
+                    path=image_path,
+                    display="inline"
+                )
+                response_message.elements.append(image_element)
+                print(f"Added image: {image_path}")
+        
+        # Send the message with any found images
         await response_message.send()
-        print("Response sent successfully")
         
     except Exception as e:
         print(f"Error processing message: {str(e)}")
