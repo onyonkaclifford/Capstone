@@ -343,3 +343,115 @@ class ListRobotCommandsHandler(RobotCommandHandler):
             "command": "list_commands",
             "params": {}
         }
+
+# New handlers for missing APIs
+class SpawnInAreaHandler(RobotCommandHandler):
+    def __init__(self):
+        super().__init__(required_params=["object_choice", "surface_name"])
+    def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        valid, error_msg = super().validate_params(params)
+        if not valid:
+            return False, error_msg
+        if "offset" in params:
+            offset = params["offset"]
+            if not isinstance(offset, list) or len(offset) != 3:
+                return False, "offset must be a list of exactly 3 values [dx, dy, dz]"
+            try:
+                params["offset"] = [float(c) for c in offset]
+            except (ValueError, TypeError):
+                return False, "offset must contain numeric values"
+        return True, None
+    def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        api_params = {
+            "object_choice": params["object_choice"],
+            "surface_name": params["surface_name"]
+        }
+        if "offset" in params:
+            api_params["offset"] = params["offset"]
+        if "color" in params:
+            api_params["color"] = params["color"]
+        return {"command": "spawn_in_area", "params": api_params}
+
+class GetPlacementSurfacesHandler(RobotCommandHandler):
+    def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return {"command": "get_placement_surfaces", "params": {}}
+
+class PickAndPlaceOnSurfaceHandler(RobotCommandHandler):
+    def __init__(self):
+        super().__init__(required_params=["object_name", "surface_name"])
+    def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        valid, error_msg = super().validate_params(params)
+        if not valid:
+            return False, error_msg
+        if "offset" in params:
+            offset = params["offset"]
+            if not isinstance(offset, list) or len(offset) != 3:
+                return False, "offset must be a list of exactly 3 values [dx, dy, dz]"
+            try:
+                params["offset"] = [float(c) for c in offset]
+            except (ValueError, TypeError):
+                return False, "offset must contain numeric values"
+        if "arm" in params and params["arm"] not in ["left", "right"]:
+            return False, "arm must be 'left' or 'right'"
+        return True, None
+    def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        api_params = {
+            "object_name": params["object_name"],
+            "surface_name": params["surface_name"]
+        }
+        if "offset" in params:
+            api_params["offset"] = params["offset"]
+        if "arm" in params:
+            api_params["arm"] = params["arm"]
+        return {"command": "pick_and_place_on_surface", "params": api_params}
+
+class GetRobotPoseHandler(RobotCommandHandler):
+    def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return {"command": "get_robot_pose", "params": {}}
+
+class CalculateRelativeDistancesHandler(RobotCommandHandler):
+    def __init__(self):
+        super().__init__(required_params=["object_a", "object_b"])
+    def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "command": "calculate_relative_distances",
+            "params": {
+                "object_a": params["object_a"],
+                "object_b": params["object_b"]
+            }
+        }
+
+class CalculateObjectDistancesHandler(RobotCommandHandler):
+    def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        api_params = {}
+        if "source_object_name" in params:
+            api_params["source_object_name"] = params["source_object_name"]
+        if "target_object_names" in params:
+            api_params["target_object_names"] = params["target_object_names"]
+        if "exclude_object_names" in params:
+            api_params["exclude_object_names"] = params["exclude_object_names"]
+        return {"command": "calculate_object_distances", "params": api_params}
+
+# Handler mapping for all robot commands
+handler_mapping = {
+    "move_robot": MoveRobotHandler(),
+    "pickup_and_place": PickupAndPlaceHandler(),
+    "transport_object": TransportObjectHandler(),
+    "spawn_objects": SpawnObjectsHandler(),
+    "spawn_in_area": SpawnInAreaHandler(),
+    "look_for_object": LookForObjectHandler(),
+    "detect_object": DetectObjectHandler(),
+    "robot_perceive": RobotPerceiveHandler(),
+    "get_placement_surfaces": GetPlacementSurfacesHandler(),
+    "pick_and_place_on_surface": PickAndPlaceOnSurfaceHandler(),
+    "move_torso": MoveTorsoHandler(),
+    "park_arms": ParkArmsHandler(),
+    "unpack_arms": UnpackArmsHandler(),
+    "move_and_rotate": MoveAndRotateHandler(),
+    "get_camera_images": GetCameraImagesHandler(),
+    "get_enhanced_camera_images": GetEnhancedCameraImagesHandler(),
+    "list_robot_commands": ListRobotCommandsHandler(),
+    "get_robot_pose": GetRobotPoseHandler(),
+    "calculate_relative_distances": CalculateRelativeDistancesHandler(),
+    "calculate_object_distances": CalculateObjectDistancesHandler(),
+}

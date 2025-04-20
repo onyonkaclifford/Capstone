@@ -56,7 +56,7 @@ if VERBOSE not in ["true", "false"]:
     )
     VERBOSE = default_verbose
 
-with open(SYSTEM_MESSAGE_FILE, "r") as f:
+with open(SYSTEM_MESSAGE_FILE, "r", encoding="utf-8") as f:
     system_message = f.read()
 
 agent = Agent(

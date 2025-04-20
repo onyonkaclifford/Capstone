@@ -51,24 +51,11 @@ def create_robot_api_tool(pycram_api_host, requests_timeout):
         # Call the API class
         return robot_api.execute_command(command=command, **params)
     
-    # Create the description for the tool
-    description = (
-        "Use this tool to control the robot simulator. Each command requires specific parameters:\n"
-        "- move_robot: coordinates=[x, y, z]\n"
-        "- pickup_and_place: object_name, target_location=[x, y, z], arm (optional: 'left' or 'right')\n"
-        "- spawn_objects: object_choice ('cereal', 'milk', 'spoon', 'bowl'), coordinates=[x, y, z], color (optional)\n"
-        "- robot_perceive: perception_area (optional)\n"
-        "- look_for_object: object_name\n"
-        "- unpack_arms: no parameters required\n"
-        "- detect_object: object_type, detection_area (optional)\n"
-        "- transport_object: object_name, target_location=[x, y, z], arm (optional: 'left' or 'right')\n"
-        "- move_torso: position (optional: 'low' or 'high')\n"
-        "- park_arms: arm (optional: 'left', 'right', 'both')\n"
-        "- move_and_rotate: location=[x, y, z] (optional), angle (optional)\n"
-        "- get_camera_images: target_distance (optional)\n"
-        "- get_enhanced_camera_images: target_distance (optional)\n\n"
-        "IMPORTANT: Always specify parameters explicitly by name in the function call."
-    )
+    # Read the tool description from the txt file
+    import os
+    tool_desc_path = os.path.join(os.path.dirname(__file__), '../../robochat_tool_api.txt')
+    with open(tool_desc_path, 'r', encoding='utf-8') as f:
+        description = f.read()
     
     # Return the StructuredTool
     return StructuredTool.from_function(
