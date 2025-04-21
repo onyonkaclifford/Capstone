@@ -53,7 +53,7 @@ def create_robot_api_tool(pycram_api_host, requests_timeout):
     
     # Read the tool description from the txt file
     import os
-    tool_desc_path = os.path.join(os.path.dirname(__file__), '../../robochat_tool_api.txt')
+    tool_desc_path = os.path.join(os.path.dirname(__file__), 'robochat_tool_api.txt')
     with open(tool_desc_path, 'r', encoding='utf-8') as f:
         description = f.read()
     
