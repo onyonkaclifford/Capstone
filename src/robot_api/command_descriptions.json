@@ -1,0 +1,22 @@
+{
+    "move_robot": "Move the robot base to specific coordinates in the environment.",
+    "pickup_and_place": "Pick up an object and place it at a given set of coordinates.",
+    "transport_object": "Carry an object from its current location to a target position.",
+    "spawn_objects": "Create a new object at specified coordinates in the simulation.",
+    "spawn_in_area": "Create a new object on a named surface, with optional position offsets.",
+    "look_at_object": "Turn the robot's head or camera to focus on a specific object.",
+    "detect_object": "Detect and return information about objects in the robot's view.",
+    "robot_perceive": "Scan and list all objects perceived in a specified area.",
+    "get_placement_surfaces": "List all available surfaces where objects can be placed.",
+    "pick_and_place_on_surface": "Pick up an object and place it on a named surface, with optional offsets.",
+    "move_torso": "Raise or lower the robot's torso to a specified position.",
+    "park_arms": "Move one or both arms to their parking (stowed) position.",
+    "unpack_arms": "Move one or both arms from the stowed to the ready position.",
+    "move_and_rotate": "Move the robot to a location and/or rotate it to a given angle.",
+    "get_camera_images": "Capture and return raw images from the robot's camera sensors.",
+    "get_enhanced_camera_images": "Capture and return enhanced, color-mapped camera images.",
+    "list_robot_commands": "List all available robot API commands and their descriptions.",
+    "get_robot_pose": "Get the robot's current position and orientation in the world.",
+    "calculate_relative_distances": "Get the dx, dy, dz, and Euclidean distance between two objects.",
+    "calculate_object_distances": "Compute distances between one object and others, or all pairs."
+}

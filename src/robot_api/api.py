@@ -12,22 +12,7 @@ from typing import Any, Dict
 
 import requests
 
-from .command_handlers import (
-    DetectObjectHandler,
-    GetCameraImagesHandler,
-    GetEnhancedCameraImagesHandler,
-    ListRobotCommandsHandler,
-    LookForObjectHandler,
-    MoveAndRotateHandler,
-    MoveRobotHandler,
-    MoveTorsoHandler,
-    ParkArmsHandler,
-    PickupAndPlaceHandler,
-    RobotPerceiveHandler,
-    SpawnObjectsHandler,
-    TransportObjectHandler,
-    UnpackArmsHandler,
-)
+from .command_handlers import *
 
 
 class RobotAPI:
@@ -38,40 +23,17 @@ class RobotAPI:
         self.timeout = timeout
 
         # Register command handlers
-        self.handlers = {
-            "move_robot": MoveRobotHandler(),
-            "pickup_and_place": PickupAndPlaceHandler(),
-            "transport_object": TransportObjectHandler(),
-            "spawn_objects": SpawnObjectsHandler(),
-            "look_for_object": LookForObjectHandler(),
-            "detect_object": DetectObjectHandler(),
-            "robot_perceive": RobotPerceiveHandler(),
-            "unpack_arms": UnpackArmsHandler(),
-            "move_torso": MoveTorsoHandler(),
-            "park_arms": ParkArmsHandler(),
-            "move_and_rotate": MoveAndRotateHandler(),
-            "get_camera_images": GetCameraImagesHandler(),
-            "get_enhanced_camera_images": GetEnhancedCameraImagesHandler(),
-            "list_robot_commands": ListRobotCommandsHandler(),
-        }
+        from .command_handlers import handler_mapping
+
+        self.handlers = handler_mapping
 
         # Command descriptions for documentation
-        self.command_descriptions = {
-            "move_robot": "Move the robot to specified coordinates",
-            "pickup_and_place": "Pick up an object and place it at a target location",
-            "transport_object": "Transport an object to a target location",
-            "spawn_objects": "Create an object in the simulation environment",
-            "look_for_object": "Make the robot look at the specified object",
-            "detect_object": "Detect an object in the robot's environment",
-            "robot_perceive": "Make the robot perceive its environment",
-            "unpack_arms": "Unpack the robot's arms from their stowed position",
-            "move_torso": "Move the robot's torso to a specified position",
-            "park_arms": "Move the robot's arm(s) to the pre-defined parking position",
-            "move_and_rotate": "Move the robot to a location and/or rotate it",
-            "get_camera_images": "Capture images from the robot's camera",
-            "get_enhanced_camera_images": "Capture enhanced visualization of images",
-            "list_robot_commands": "List all available robot commands",
-        }
+        # Load command descriptions from JSON file
+        descriptions_path = os.path.join(
+            os.path.dirname(__file__), "command_descriptions.json"
+        )
+        with open(descriptions_path, "r") as f:
+            self.command_descriptions = json.load(f)
 
     def execute_command(self, command: str = None, **params) -> str:
         """
