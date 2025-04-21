@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 
 # Local imports
 from .robot_api import create_robot_api_tool, create_robot_commands_tool
+from .robot_api.evaluation_tracker import set_user_input
 
 
 class Agent:
@@ -106,6 +107,9 @@ class Agent:
         print("=====================================")
         print("Processing new input message...")
         print(f"Received message: {message_text}")
+        
+        # Record the user input for evaluation
+        set_user_input(message_text)
 
         # Process image if available
         image_url = (
