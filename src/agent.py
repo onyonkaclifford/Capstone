@@ -11,7 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 # Local imports
-from robot_api import create_robot_api_tool, create_robot_commands_tool
+from .robot_api import create_robot_api_tool, create_robot_commands_tool
 
 
 class Agent:
@@ -25,13 +25,16 @@ class Agent:
         requests_timeout,
         verbose=True,
         handle_parsing_errors=True,
+        skip_execution: bool = False,
     ):
         self._chat_history = []
 
         tools = [
             Agent._get_hello_tool(),
-            create_robot_api_tool(pycram_api_host, requests_timeout),
-            create_robot_commands_tool(pycram_api_host, requests_timeout),
+            create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution),
+            create_robot_commands_tool(
+                pycram_api_host, requests_timeout, skip_execution
+            ),
         ]
         llm = ChatOpenAI(model=model, temperature=temperature, max_tokens=max_tokens)
 
