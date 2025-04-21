@@ -14,4 +14,4 @@ exclude = '''
 '''
 
 [tool.bandit]
-exclude_dirs = [".git", "venv", ".chainlit"]
+exclude_dirs = [".git", "venv", ".chainlit", "tests"]

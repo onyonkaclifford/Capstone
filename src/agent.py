@@ -89,7 +89,9 @@ class Agent:
             description="Use this tool when asked who you are or about your identity",
         )
 
-    def handle_message(self, message_text, base64_images, base64_images_mimes):
+    def handle_message(
+        self, message_text, base64_images, base64_images_mimes, print_markers=True
+    ):
         """
         Process a user message and optional image input.
 
@@ -102,10 +104,11 @@ class Agent:
             The AI's response as a string
         """
         # Add a marker to show beginning of new output
-        print("")
-        print("=====================================")
-        print("Processing new input message...")
-        print(f"Received message: {message_text}")
+        if print_markers:
+            print("")
+            print("=====================================")
+            print("Processing new input message...")
+            print(f"Received message: {message_text}")
 
         # Process image if available
         image_url = (
