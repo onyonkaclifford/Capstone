@@ -28,8 +28,15 @@ if 0.0 > TEMPERATURE or TEMPERATURE > 1.0:
 with open(SYSTEM_MESSAGE_FILE, "r", encoding="utf-8") as f:
     system_message = f.read()
 
-MOVE_ROBOT_CSV = "./tests/data/move_robot.csv"
-TEST_REPORT_FILE = "./test_report.txt"
+MANIPULATION_CSV = "./tests/data/manipulation.psv"
+TEST_REPORT_FILE = "./test_report.json"
+
+with open(MANIPULATION_CSV) as f:
+    ALL_TEST_CASES = [i.split("|") for i in f.readlines()[1:]]
+
+
+def _get_command_test_cases(command):
+    return [i for i in ALL_TEST_CASES if i[0].strip() == command]
 
 
 class TestRoboCRAM(unittest.TestCase):
@@ -45,37 +52,75 @@ class TestRoboCRAM(unittest.TestCase):
             verbose=False,
             skip_execution=True,
         )
-        cls.test_report_text = ""
+        cls.test_report = []
 
     @classmethod
     def tearDownClass(cls):
         with open(TEST_REPORT_FILE, "w") as f:
-            f.write(cls.test_report_text)
+            json.dump(cls.test_report, f, indent=4)
+
+    @staticmethod
+    def _are_coordinates_within_range(expected_dict, response_dict, param_name):
+        x_range = [float(i) for i in expected_dict["params"][param_name][0].split("-")]
+        y_range = [float(i) for i in expected_dict["params"][param_name][1].split("-")]
+        z_range = [float(i) for i in expected_dict["params"][param_name][2].split("-")]
+        if (
+            response_dict["params"][param_name][0] >= x_range[0]
+            and response_dict["params"][param_name][0] <= x_range[1]
+            and response_dict["params"][param_name][1] >= y_range[0]
+            and response_dict["params"][param_name][1] <= y_range[1]
+            and response_dict["params"][param_name][2] >= z_range[0]
+            and response_dict["params"][param_name][2] <= z_range[1]
+        ):
+            return True
+        else:
+            return False
 
     @staticmethod
     def _manupulation_test_helper(
-        functionality_being_tested, test_cases_file, similarity_threshold=100
+        functionality_being_tested,
+        test_cases,
+        similarity_threshold=100,
+        check_coordinates_range=False,
+        coordinates_name="coordinates",
     ):
-        with open(test_cases_file) as f:
-            test_cases = [i.split("|") for i in f.readlines()[1:]]
-
         num_of_test_cases = len(test_cases)
         passed = 0
+        num_returned_correct_commands = 0
+        num_returned_correct_params = 0
+        test_cases_results = []
+        expected_num_correct_command_params = 0
 
-        for user_input, expected_response, asserts in test_cases:
-            assert_list = [i.strip().lower() for i in asserts.split(",")]
+        for _, user_input, expected_response, asserts in test_cases:
+            assert_list = (
+                [i.strip().lower() for i in asserts.split(",")]
+                if len(asserts.strip()) > 0
+                else []
+            )
             response = TestRoboCRAM.agent.handle_message(
                 user_input.strip(), [], [], print_markers=False
             )
-            to_continue = False
 
+            test_cases_results.append(
+                {
+                    "user_input": user_input,
+                    "expected_output": expected_response,
+                    "agent_response": response,
+                    "failure_reasons": [],
+                    "passed": False,
+                }
+            )
+
+            to_continue = False
             for i in assert_list:  # User input expected to result in an error
                 try:
                     assert i in response.lower()
                 except AssertionError:
+                    test_cases_results[-1]["failure_reasons"].append(
+                        f"Agent response doesn't contain required word, '{i}'"
+                    )
                     to_continue = True
                     break
-
             if to_continue:
                 continue
 
@@ -88,38 +133,91 @@ class TestRoboCRAM(unittest.TestCase):
                         < similarity_threshold
                     )
                 except AssertionError:
+                    test_cases_results[-1]["failure_reasons"].append(
+                        "Agent response is too disimilar to the expected response"
+                    )
                     continue
             else:  # User input expected to produce a valid command with correct parameters
-                response_obj = json.loads(response)
+                expected_num_correct_command_params += 1
                 expected_obj = json.loads(expected_response)
+                response_obj = json.loads(response)
+                test_cases_results[-1]["expected_output"] = expected_obj
+                test_cases_results[-1]["agent_response"] = response_obj
+
                 try:
                     assert response_obj["command"] == expected_obj["command"]
-                    assert response_obj["coordinates"] == expected_obj["coordinates"]
+                    num_returned_correct_commands += 1
+
+                    for param_name in expected_obj["params"].keys():
+                        if param_name not in response_obj["params"]:
+                            test_cases_results[-1]["failure_reasons"].append(
+                                f"Agent response doesn't contain required parameter, {param_name}"
+                            )
+                            continue
+                        if param_name == coordinates_name and check_coordinates_range:
+                            if not TestRoboCRAM._are_coordinates_within_range(
+                                expected_obj, response_obj, coordinates_name
+                            ):
+                                continue
+                        else:
+                            assert (
+                                expected_obj["params"][param_name]
+                                == response_obj["params"][param_name]
+                            )
+
+                    num_returned_correct_params += 1
                 except AssertionError:
+                    test_cases_results[-1]["failure_reasons"].append(
+                        "Agent response contains commands or parameters that are unexpected"
+                    )
                     continue
 
+            test_cases_results[-1]["passed"] = True
             passed += 1
 
-        TestRoboCRAM.test_report_text += f"{functionality_being_tested} {passed}/{num_of_test_cases} test cases passed\n"
+        TestRoboCRAM.test_report.append(
+            {
+                "test": functionality_being_tested,
+                "num_of_test_cases": num_of_test_cases,
+                "passed": passed,
+                "num_returned_correct_commands": num_returned_correct_commands,
+                "num_returned_correct_params": num_returned_correct_params,
+                "expected_num_correct_command_params": expected_num_correct_command_params,
+                "test_cases": test_cases_results,
+            }
+        )
 
     def test_self_identity(self):
         """
         Does the system know its identity as RoboCRAM?
         """
-        response = TestRoboCRAM.agent.handle_message(
-            "Who are you", [], [], print_markers=False
-        )
+        user_input = "Who are you"
         expected = "Hello I am RoboCRAM. How can I help?"
+        response = TestRoboCRAM.agent.handle_message(
+            user_input, [], [], print_markers=False
+        )
 
         try:
             assert "RoboCRAM" in response
             assert Levenshtein.distance(response, expected) < 100
-            TestRoboCRAM.test_report_text += (
-                "Does the system know its identity as RoboCRAM? Yes\n"
+            TestRoboCRAM.test_report.append(
+                {
+                    "test": "Does the system know its identity as RoboCRAM?",
+                    "user_input": user_input,
+                    "expected_output": expected,
+                    "agent_response": response,
+                    "passed": True,
+                }
             )
         except AssertionError:
-            TestRoboCRAM.test_report_text += (
-                "Does the system know its identity as RoboCRAM? No\n"
+            TestRoboCRAM.test_report.append(
+                {
+                    "test": "Does the system know its identity as RoboCRAM?",
+                    "user_input": user_input,
+                    "expected_output": expected,
+                    "agent_response": response,
+                    "passed": False,
+                }
             )
 
     def test_move_robot(self):
@@ -127,7 +225,8 @@ class TestRoboCRAM(unittest.TestCase):
         Can the robot move within its environment?
         """
         TestRoboCRAM._manupulation_test_helper(
-            "Can the robot move within its environment?", MOVE_ROBOT_CSV
+            "Can the robot move within its environment?",
+            _get_command_test_cases("move_robot"),
         )
 
 

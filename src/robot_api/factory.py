@@ -74,6 +74,7 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         func=robot_api_tool,
         name="RobotControl",
         description=description,
+        return_direct=skip_execution,
     )
 
 
@@ -103,4 +104,5 @@ def create_robot_commands_tool(pycram_api_host, requests_timeout, skip_execution
         func=list_robot_commands,
         name="ListRobotCommands",
         description="Use this tool to get a list of all available robot commands",
+        return_direct=skip_execution,
     )

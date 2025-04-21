@@ -24,7 +24,8 @@ this process.
 
 ### Testing
 
-The unittest Standard Python Library package is used for testing
+The unittest Standard Python Library package is used for testing, and it generates a test report (`test_report.json`)
+that can be analysed for more in-depth insights
 
 - To run tests: `python -m unittest`
 - To run tests with increased verbosity: `python -m unittest -v`
