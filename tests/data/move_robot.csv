@@ -1,0 +1,3 @@
+user_input | expected_response | asserts
+move | Specify the coordinates you would like the robot to move to | coordinates
+move the robot to 1, 2, 3 | {"command": "move", "coordinates", [1,2,3]} |

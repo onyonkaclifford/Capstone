@@ -14,3 +14,5 @@ enhanced_images/
 
 # add items that end with .png to the gitignore file
 *.png
+
+test_report.txt
