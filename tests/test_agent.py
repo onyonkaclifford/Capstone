@@ -32,7 +32,7 @@ MANIPULATION_CSV = "./tests/data/manipulation.psv"
 TEST_REPORT_FILE = "./test_report.json"
 
 with open(MANIPULATION_CSV) as f:
-    ALL_TEST_CASES = [i.split("|") for i in f.readlines()[1:]]
+    ALL_TEST_CASES = [i.split("|") for i in f.readlines()[1:] if len(i.strip()) > 0]
 
 
 def _get_command_test_cases(command):
@@ -140,8 +140,12 @@ class TestRoboCRAM(unittest.TestCase):
             else:  # User input expected to produce a valid command with correct parameters
                 expected_num_correct_command_params += 1
                 expected_obj = json.loads(expected_response)
-                response_obj = json.loads(response)
                 test_cases_results[-1]["expected_output"] = expected_obj
+
+                try:
+                    response_obj = json.loads(response)
+                except json.JSONDecodeError:  # An incorrect response was returned
+                    continue
                 test_cases_results[-1]["agent_response"] = response_obj
 
                 try:
@@ -227,6 +231,33 @@ class TestRoboCRAM(unittest.TestCase):
         TestRoboCRAM._manupulation_test_helper(
             "Can the robot move within its environment?",
             _get_command_test_cases("move_robot"),
+        )
+
+    def test_move_and_rotate_robot(self):
+        """
+        Can the robot move and rotate within its environment?
+        """
+        TestRoboCRAM._manupulation_test_helper(
+            "Can the robot move and rotate within its environment?",
+            _get_command_test_cases("move_and_rotate"),
+        )
+
+    def test_pick_and_place(self):
+        """
+        Can the robot pick an object and place it at a specific coordinate?
+        """
+        TestRoboCRAM._manupulation_test_helper(
+            "Can the robot pick an object and place it at a specific coordinate?",
+            _get_command_test_cases("pickup_and_place"),
+        )
+
+    def test_pick_and_place_on_surface(self):
+        """
+        Can the robot pick an object and place it on a specific surface?
+        """
+        TestRoboCRAM._manupulation_test_helper(
+            "Can the robot pick an object and place it on a specific surface?",
+            _get_command_test_cases("pick_and_place_on_surface"),
         )
 
 
