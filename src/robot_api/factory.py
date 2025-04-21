@@ -5,9 +5,10 @@ Factory functions for creating LangChain tools from the RobotAPI
 from langchain.tools import StructuredTool
 
 from .api import RobotAPI
+from .api_no_exec import RobotAPINoExec
 
 
-def create_robot_api_tool(pycram_api_host, requests_timeout):
+def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: bool):
     """
     Create a structured tool for LangChain from the RobotAPI class
 
@@ -19,7 +20,10 @@ def create_robot_api_tool(pycram_api_host, requests_timeout):
         StructuredTool instance for use with LangChain
     """
     # Create an instance of our RobotAPI class
-    robot_api = RobotAPI(pycram_api_host, requests_timeout)
+    if skip_execution:
+        robot_api = RobotAPINoExec()
+    else:
+        robot_api = RobotAPI(pycram_api_host, requests_timeout)
 
     # Create the adapter function for LangChain
     def robot_api_tool(
@@ -73,7 +77,7 @@ def create_robot_api_tool(pycram_api_host, requests_timeout):
     )
 
 
-def create_robot_commands_tool(pycram_api_host, requests_timeout):
+def create_robot_commands_tool(pycram_api_host, requests_timeout, skip_execution: bool):
     """
     Create a structured tool for listing robot commands
 
@@ -85,7 +89,10 @@ def create_robot_commands_tool(pycram_api_host, requests_timeout):
         StructuredTool instance for use with LangChain
     """
     # Create an instance of our RobotAPI class
-    robot_api = RobotAPI(pycram_api_host, requests_timeout)
+    if skip_execution:
+        robot_api = RobotAPINoExec()
+    else:
+        robot_api = RobotAPI(pycram_api_host, requests_timeout)
 
     # Create the function for the tool
     def list_robot_commands():

@@ -25,13 +25,16 @@ class Agent:
         requests_timeout,
         verbose=True,
         handle_parsing_errors=True,
+        skip_execution: bool = False,
     ):
         self._chat_history = []
 
         tools = [
             Agent._get_hello_tool(),
-            create_robot_api_tool(pycram_api_host, requests_timeout),
-            create_robot_commands_tool(pycram_api_host, requests_timeout),
+            create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution),
+            create_robot_commands_tool(
+                pycram_api_host, requests_timeout, skip_execution
+            ),
         ]
         llm = ChatOpenAI(model=model, temperature=temperature, max_tokens=max_tokens)
 
