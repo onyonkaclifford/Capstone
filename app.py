@@ -10,8 +10,8 @@ import chainlit as cl
 from dotenv import load_dotenv
 from PIL import Image
 
-import utils
-from agent import Agent
+from src import utils
+from src.agent import Agent
 
 load_dotenv()
 

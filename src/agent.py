@@ -11,7 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 # Local imports
-from robot_api import create_robot_api_tool, create_robot_commands_tool
+from .robot_api import create_robot_api_tool, create_robot_commands_tool
 
 
 class Agent:

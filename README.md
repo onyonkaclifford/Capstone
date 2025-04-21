@@ -27,7 +27,7 @@ this process.
 Note: Create a `.env` file with keys similar to those of `.env.sample` and fill in the correct values before proceeding
 (the `.env` file is not checked into Git because it contains secrets)
 
-- Nomal usage during development: `chainlit run ./src/app.py --port 8000 -w`
+- Nomal usage during development: `chainlit run ./app.py --port 8000 -w`
 
 Using Docker:
 
