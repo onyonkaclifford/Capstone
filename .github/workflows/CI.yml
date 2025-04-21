@@ -37,6 +37,16 @@ jobs:
   testing:
     name: testing
     runs-on: ubuntu-latest
+    environment: dev
+    env:
+      OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+      OPENAI_MODEL: ${{vars.OPENAI_MODEL}}
+      TEMPERATURE: ${{vars.TEMPERATURE}}
+      MAX_TOKENS: ${{vars.MAX_TOKENS}}
+      IMAGE_MAX_WIDTH: ${{vars.IMAGE_MAX_WIDTH}}
+      VERBOSE: ${{vars.VERBOSE}}
+      LOGGER_NAME: ${{vars.LOGGER_NAME}}
+      SYSTEM_MESSAGE_FILE: ${{vars.SYSTEM_MESSAGE_FILE}}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
