@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -20,7 +19,7 @@ LOGGER_NAME = os.getenv("LOGGER_NAME").lower()
 PYCRAM_API_HOST = os.getenv("PYCRAM_API_HOST")
 SYSTEM_MESSAGE_FILE = os.getenv("SYSTEM_MESSAGE_FILE")
 REQUESTS_TIMEOUT = int(os.getenv("REQUESTS_TIMEOUT"))
-RAG_DOCS_DIRECTORY ="docs/" #os.getenv("RAG_DOCS_DIRECTORY", "docs/")
+RAG_DOCS_DIRECTORY = "docs/"  # os.getenv("RAG_DOCS_DIRECTORY", "docs/")
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -57,11 +56,13 @@ try:
         REQUESTS_TIMEOUT,
         True if VERBOSE == "true" else False,
         handle_parsing_errors=True,
-        pdf_directory=RAG_DOCS_DIRECTORY
+        pdf_directory=RAG_DOCS_DIRECTORY,
     )
 except Exception as e:
     logger.error(f"Failed to create agent: {str(e)}")
     raise
+
+
 @cl.on_chat_start
 async def on_start():
     await cl.Message(content="I am ready ...").send()
@@ -82,4 +83,3 @@ async def on_message(message: cl.Message):
 
     result = agent.handle_message(message.content, images, images_mimes)
     await cl.Message(result).send()
-
