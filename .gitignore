@@ -5,4 +5,7 @@ __pycache__/
 .files/
 
 .env
+<<<<<<< HEAD
 chroma_db/
+=======
+>>>>>>> 54cea12e9acd1411de655805f38da9d58d93018d
