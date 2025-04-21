@@ -6,6 +6,7 @@ from langchain.tools import StructuredTool
 
 from .api import RobotAPI
 from .api_no_exec import RobotAPINoExec
+from .evaluation_tracker import set_model_output, finalize_record
 
 
 def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: bool):
@@ -58,9 +59,17 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
 
         # Add any additional kwargs
         params.update(kwargs)
+        
+        # Track the model output for evaluation
+        set_model_output(command, params)
 
         # Call the API class
-        return robot_api.execute_command(command=command, **params)
+        result = robot_api.execute_command(command=command, **params)
+        
+        # Finalize the evaluation record
+        finalize_record()
+        
+        return result
 
     # Read the tool description from the txt file
     import os

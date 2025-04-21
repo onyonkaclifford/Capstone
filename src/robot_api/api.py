@@ -13,6 +13,7 @@ from typing import Any, Dict
 import requests
 
 from .command_handlers import *
+from .evaluation_tracker import set_command_validity, set_params_validity
 
 
 class RobotAPI:
@@ -48,17 +49,25 @@ class RobotAPI:
         """
         # Check if command is provided
         if command is None:
+            set_command_validity(False)
+            set_params_validity(False)
             return "Please specify a robot command"
 
         # Check if command exists
         if command not in self.handlers:
+            set_command_validity(False)
+            set_params_validity(False)
             return f"ERROR: Unknown command '{command}'"
+        else:
+            set_command_validity(True)
 
         # Get the handler for this command
         handler = self.handlers[command]
 
         # Validate parameters
         valid, error_msg = handler.validate_params(params)
+        set_params_validity(valid)
+        
         if not valid:
             return f"ERROR: {error_msg}"
 
