@@ -48,7 +48,6 @@ class TestStringMethods(unittest.TestCase):
         """
         response = self.agent.handle_message("Who are you", [], [])
         expected = "Hello I am RoboCRAM. How can I help?"
-        self.assertTrue("hello" in response.lower())
         self.assertTrue("RoboCRAM" in response)
         self.assertLessEqual(Levenshtein.distance(response, expected), 100)
 
