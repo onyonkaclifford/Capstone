@@ -22,6 +22,13 @@ this process.
 2. Install git hook scripts: `pre-commit install`
 3. (optional) Run against all files: `pre-commit run --all-files`
 
+### Testing
+
+The unittest Standard Python Library package is used for testing
+
+- To run tests: `python -m unittest`
+- To run tests with increased verbosity: `python -m unittest -v`
+
 ## Usage
 
 Note: Create a `.env` file with keys similar to those of `.env.sample` and fill in the correct values before proceeding
