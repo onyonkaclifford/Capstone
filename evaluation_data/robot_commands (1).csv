@@ -1,0 +1,32 @@
+user_input,command,parameters,asserts
+move,move_robot,,requires coordinates
+"move to 1, 2, 3",move_robot,"{""""coordinates"""": [1, 2, 3]}","coordinates=[1,2,3]"
+go to origin,move_robot,"{""""coordinates"""": [0, 0, 0]}","coordinates=[0,0,0]"
+where are you?,get_robot_pose,,returns pose data
+what's your current position?,get_robot_pose,,returns position & orientation
+look at cereal,look_at_object,"{""""obj_name"""": """"cereal""""}","obj_name=""cereal"""
+focus on the cereal box,look_at_object,"{""""obj_name"""": """"cereal""""}","obj_name=""cereal"""
+turn towards the spoon,look_at_object,"{""""obj_name"""": """"spoon""""}","obj_name=""spoon"""
+pick up cereal and place it on the counter,pick_and_place_on_surface,"{""""object_name"""": """"cereal"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","surface_name=""counter"""
+put the cereal box on the kitchen island,pick_and_place_on_surface,"{""""object_name"""": """"cereal"""", """"surface_name"""": """"kitchen_island_surface""""}","surface_name=""kitchen_island_surface"""
+move cereal to the table,pick_and_place_on_surface,"{""""object_name"""": """"cereal"""", """"surface_name"""": """"table""""}","surface_name=""table"""
+place the spoon on the counter 10cm from the edge,pick_and_place_on_surface,"{""""object_name"""": """"spoon"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","offsets=[0.1,0.1]"
+relocate the milk to the island,pick_and_place_on_surface,"{""""object_name"""": """"milk"""", """"surface_name"""": """"kitchen_island_surface""""}","object_name=""milk"""
+take a picture,get_camera_images,"{""""target_distance"""": 2.0}",default distance=2.0
+scan the table,robot_perceive,"{""""perception_area"""": """"table_area_main""""}","perception_area=""table_area_main"""
+what objects do you see?,detect_object,,returns object list
+raise your torso,move_torso,"{""""position"""": """"high""""}","position=""high"""
+park your arms,park_arms,,no params needed
+how far is the cereal from the spoon?,calculate_relative_distances,"{""""object_name_1"""": """"cereal"""", """"object_name_2"""": """"spoon""""}",compares two objects
+spawn a red cereal box on the island,spawn_in_area,"{""""object_choice"""": """"cereal"""", """"surface_name"""": """"kitchen_island_surface"""", """"color"""": """"red""""}","color=""red"""
+create a new spoon on the table,spawn_in_area,"{""""object_choice"""": """"spoon"""", """"surface_name"""": """"table""""}","object_choice=""spoon"""
+pick and place object number 1 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_1"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_1"""
+pick and place object number 2 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_2"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_2"""
+pick and place object number 3 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_3"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_3"""
+pick and place object number 4 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_4"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_4"""
+pick and place object number 5 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_5"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_5"""
+pick and place object number 6 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_6"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_6"""
+pick and place object number 7 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_7"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_7"""
+pick and place object number 8 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_8"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_8"""
+pick and place object number 9 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_9"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_9"""
+pick and place object number 10 at the counter,pick_and_place_on_surface,"{""""object_name"""": """"object_10"""", """"surface_name"""": """"counter"""", """"offset_x"""": 0.1, """"offset_y"""": 0.1}","object_name=""object_10"""
