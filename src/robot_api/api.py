@@ -69,7 +69,7 @@ class RobotAPI:
         set_params_validity(valid)
         
         if not valid:
-            return f"ERROR: {error_msg}"
+            return f"ERROR we have the error here: {error_msg}"
 
         # Execute the command
         try:

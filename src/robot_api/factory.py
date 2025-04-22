@@ -38,8 +38,16 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         perception_area: str = None,
         object_type: str = None,
         detection_area: str = None,
+        surface_name: str = None,
+        offset: list = None,
+        offset_x: float = None,
+        offset_y: float = None,
         **kwargs,
     ):
+        print(f"\n==== ROBOT API TOOL CALLED ====")
+        print(f"Command: {command}")
+        print(f"Parameters: {', '.join([f'{k}={v}' for k, v in locals().items() if k != 'command' and k != 'kwargs' and v is not None])}")
+        
         # Collect non-None parameters
         params = {}
         locals_dict = locals()
@@ -53,6 +61,10 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
             "perception_area",
             "object_type",
             "detection_area",
+            "surface_name",
+            "offset",
+            "offset_x",
+            "offset_y",
         ]:
             if param in locals_dict and locals_dict[param] is not None:
                 params[param] = locals_dict[param]
@@ -62,12 +74,16 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         
         # Track the model output for evaluation
         set_model_output(command, params)
+        print("Model output recorded in evaluation tracker")
 
         # Call the API class
+        print(f"Calling robot_api.execute_command with command={command}")
         result = robot_api.execute_command(command=command, **params)
         
         # Finalize the evaluation record
+        print("Finalizing evaluation record")
         finalize_record()
+        print("Evaluation record finalized")
         
         return result
 

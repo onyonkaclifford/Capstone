@@ -8,7 +8,7 @@
     "detect_object": "Detect and return information about objects in the robot's view.",
     "robot_perceive": "Scan and list all objects perceived in a specified area.",
     "get_placement_surfaces": "List all available surfaces where objects can be placed.",
-    "pick_and_place_on_surface": "Pick up an object and place it on a named surface, with optional offsets.",
+    "pick_and_place_on_surface": "Pick up an object and place it on a named surface, with optional offsets. input parameter is surface_name which can  sink_area_surface,  kitchen_island_surface, kitchen_island_stove, table_area_main, oven_area_area,  sink_area_sink, oven_area_oven_door, fridge_area",
     "move_torso": "Raise or lower the robot's torso to a specified position.",
     "park_arms": "Move one or both arms to their parking (stowed) position.",
     "unpack_arms": "Move one or both arms from the stowed to the ready position.",

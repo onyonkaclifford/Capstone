@@ -347,29 +347,62 @@ class PickAndPlaceOnSurfaceHandler(RobotCommandHandler):
 
     def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         valid, error_msg = super().validate_params(params)
+        primary_surfaces_list = [
+            "sink_area_surface",
+            "kitchen_island_surface",
+            "kitchen_island_stove",
+            "table_area_main",
+            "oven_area_area",
+        ]
+        secondary_surfaces_list = [
+            "sink_area_sink",
+            "oven_area_oven_door",
+            "fridge_area",
+        ]
         if not valid:
             return False, error_msg
+
+        # Validate surface_name is acceptable
+        surface_name = params.get("surface_name")
+        if surface_name not in primary_surfaces_list and surface_name not in secondary_surfaces_list:
+            return False, f"Invalid surface_name: {surface_name}"
+
+        # Handle offset: convert a list of values into offset_x and offset_y, or use defaults
         if "offset" in params:
             offset = params["offset"]
-            if not isinstance(offset, list) or len(offset) != 3:
-                return False, "offset must be a list of exactly 3 values [dx, dy, dz]"
+            # Check if offset is a list and has at least 2 elements
+            if not isinstance(offset, list) or len(offset) < 2:
+                return False, "offset must be a list with at least 2 values [dx, dy]"
+            
             try:
-                params["offset"] = [float(c) for c in offset]
-            except (ValueError, TypeError):
+                # Take just the first two elements for x and y
+                offset_x = float(offset[0])
+                offset_y = float(offset[1])
+                params["offset_x"] = offset_x
+                params["offset_y"] = offset_y
+            except (ValueError, TypeError, IndexError):
                 return False, "offset must contain numeric values"
-        if "arm" in params and params["arm"] not in ["left", "right"]:
-            return False, "arm must be 'left' or 'right'"
+        else:
+            params["offset_x"] = 0.1
+            params["offset_y"] = 0.1
+
+        # Validate 'arm' if provided, or set default to 'right'
+        if "arm" in params:
+            if params["arm"] not in ["left", "right"]:
+                return False, "arm must be 'left' or 'right'"
+        else:
+            params["arm"] = "right"
+
         return True, None
 
     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         api_params = {
             "object_name": params["object_name"],
             "surface_name": params["surface_name"],
+            "offset_x": params["offset_x"],
+            "offset_y": params["offset_y"],
+            "arm": params["arm"],
         }
-        if "offset" in params:
-            api_params["offset"] = params["offset"]
-        if "arm" in params:
-            api_params["arm"] = params["arm"]
         return {"command": "pick_and_place_on_surface", "params": api_params}
 
 
