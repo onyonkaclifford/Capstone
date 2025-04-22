@@ -54,16 +54,24 @@
         },
         "example": "pick_and_place_on_surface object_name=cereal1 surface_name=kitchen_island_surface offset_x=0.1 offset_y=0.2 arm=right"
     },
-    "get_world_objects": {
-        "description": "Retrieves all objects in the world with optional filtering by type and area.",
-        "parameters": {
-            "exclude_types": "List of object types to exclude",
-            "obj_type": "Type of object to filter by (optional)",
-            "area": "Area name to filter objects by (optional)"
-        },
-        "example": "get_world_objects exclude_types=['floor', 'wall', 'ceiling'] obj_type=cereal area=kitchen_island_surface"
-    },
 
+    "get_world_objects": {
+    "description": "Retrieves all objects in the world with optional filtering by type and area. By default excludes floor, wall, ceiling, ground, kitchen, apartment, and pr2 objects.",
+    "parameters": {
+        "exclude_types": "List of object types to exclude (optional, defaults to ['floor', 'wall', 'ceiling', 'ground', 'kitchen', 'apartment', 'pr2'])",
+        "obj_type": "Type of object to filter by (optional)",
+        "area": "Area name to filter objects by (optional)"
+    },
+    "required_parameters": [],
+    "optional_parameters": ["exclude_types", "obj_type", "area"],
+    "examples": [
+        "get_world_objects()",
+        "get_world_objects(obj_type='cereal')",
+        "get_world_objects(area='kitchen_island_surface')",
+        "get_world_objects(exclude_types=['spoon', 'bowl'])",
+        "get_world_objects(obj_type='bowl', area='table_area_main')"
+    ]
+},
     "list_robot_commands": {
         "description": "Lists all available robot commands.",
         "parameters": {},
