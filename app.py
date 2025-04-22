@@ -49,15 +49,17 @@ with open(SYSTEM_MESSAGE_FILE, "r", encoding="utf-8") as f:
     system_message = f.read()
 
 agent = Agent(
-    OPENAI_MODEL,
-    TEMPERATURE,
-    MAX_TOKENS,
-    PYCRAM_API_HOST,
-    system_message,
-    REQUESTS_TIMEOUT,
-    True if VERBOSE == "true" else False,
-)
 
+        OPENAI_MODEL,
+        TEMPERATURE,
+        MAX_TOKENS,
+        PYCRAM_API_HOST,
+        system_message,
+        REQUESTS_TIMEOUT,
+        True if VERBOSE == "true" else False,
+        handle_parsing_errors=True,
+        pdf_directory=RAG_DOCS_DIRECTORY,
+)
 
 @cl.on_chat_start
 async def on_start():
