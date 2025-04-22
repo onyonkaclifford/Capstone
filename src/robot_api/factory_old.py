@@ -16,7 +16,6 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
     Args:
         pycram_api_host: Host URL for the robot API
         requests_timeout: Timeout for API requests in seconds
-        skip_execution: Whether to skip execution of commands
 
     Returns:
         StructuredTool instance for use with LangChain
@@ -30,25 +29,19 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
     # Create the adapter function for LangChain
     def robot_api_tool(
         command: str = None,
-        # Parameters for move_robot
         coordinates: list = None,
-        # Parameters for pickup_and_place
         object_name: str = None,
         target_location: list = None,
         arm: str = None,
-        # Parameters for spawn_objects
         object_choice: str = None,
         color: str = None,
-        # Parameters for spawn_in_area and pick_and_place_on_surface
+        perception_area: str = None,
+        object_type: str = None,
+        detection_area: str = None,
         surface_name: str = None,
+        offset: list = None,
         offset_x: float = None,
         offset_y: float = None,
-        # Parameters for get_world_objects
-        exclude_types: list = None,
-        obj_type: str = None,
-        area: str = None,
-        # Others
-        name: str = None,
         **kwargs,
     ):
         print(f"\n==== ROBOT API TOOL CALLED ====")
@@ -65,13 +58,13 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
             "arm",
             "object_choice",
             "color",
+            "perception_area",
+            "object_type",
+            "detection_area",
             "surface_name",
+            "offset",
             "offset_x",
             "offset_y",
-            "exclude_types",
-            "obj_type", 
-            "area",
-            "name"
         ]:
             if param in locals_dict and locals_dict[param] is not None:
                 params[param] = locals_dict[param]
@@ -116,7 +109,6 @@ def create_robot_commands_tool(pycram_api_host, requests_timeout, skip_execution
     Args:
         pycram_api_host: Host URL for the robot API
         requests_timeout: Timeout for API requests in seconds
-        skip_execution: Whether to skip execution of commands
 
     Returns:
         StructuredTool instance for use with LangChain
