@@ -1,3 +1,4 @@
+
 import logging
 import os
 
@@ -19,7 +20,7 @@ LOGGER_NAME = os.getenv("LOGGER_NAME").lower()
 PYCRAM_API_HOST = os.getenv("PYCRAM_API_HOST")
 SYSTEM_MESSAGE_FILE = os.getenv("SYSTEM_MESSAGE_FILE")
 REQUESTS_TIMEOUT = int(os.getenv("REQUESTS_TIMEOUT"))
-RAG_DOCS_DIRECTORY = "docs/"  # os.getenv("RAG_DOCS_DIRECTORY", "docs/")
+RAG_DOCS_DIRECTORY = "docs/"#os.getenv("RAG_DOCS_DIRECTORY", "docs/")
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -47,14 +48,15 @@ if not os.path.exists(RAG_DOCS_DIRECTORY):
     os.makedirs(RAG_DOCS_DIRECTORY)
 
 try:
+    # Update Agent creation to match the new Agent class parameters
     agent = Agent(
-        OPENAI_MODEL,
-        TEMPERATURE,
-        MAX_TOKENS,
-        PYCRAM_API_HOST,
-        system_message,
-        REQUESTS_TIMEOUT,
-        True if VERBOSE == "true" else False,
+        model=OPENAI_MODEL,
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+        pycram_api_host=PYCRAM_API_HOST,
+        system_message_text=system_message,
+        requests_timeout=REQUESTS_TIMEOUT,
+        verbose=True if VERBOSE == "true" else False,
         handle_parsing_errors=True,
         pdf_directory=RAG_DOCS_DIRECTORY,
     )
