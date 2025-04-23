@@ -217,13 +217,13 @@ class Agent:
             The AI's response as a string
         """
         # Add a marker to show beginning of new output
-        print("")
-        print("=====================================")
-        print("Processing new input message...")
-        print(f"Received message: {message_text}")
+        print("") if print_markers else "No print"
+        print("=====================================") if print_markers else "No print"
+        print("Processing new input message...") if print_markers else "No print"
+        print(f"Received message: {message_text}") if print_markers else "No print"
 
         # Record the user input for evaluation
-        set_user_input(message_text)
+        set_user_input(message_text, verbose=print_markers)
 
         # Process image if available
         image_url = (

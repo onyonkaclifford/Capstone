@@ -31,34 +31,46 @@ def reset_record():
     }
 
 
-def set_user_input(input_text):
+def set_user_input(input_text, verbose=True):
     """Store the user's input"""
     current_record["user_input"] = input_text
     current_record["timestamp"] = datetime.now().isoformat()
-    print(f"Evaluation tracker: Recorded user input: {input_text[:50]}...")
+    (
+        print(f"Evaluation tracker: Recorded user input: {input_text[:50]}...")
+        if verbose
+        else "No print"
+    )
 
 
-def set_model_output(command, params):
+def set_model_output(command, params, verbose=True):
     """Store the model's parsed output"""
     current_record["model_output"] = {"command": command, **params}
-    print(f"Evaluation tracker: Recorded model output - command: {command}")
+    (
+        print(f"Evaluation tracker: Recorded model output - command: {command}")
+        if verbose
+        else "No print"
+    )
 
 
-def set_command_validity(is_valid):
+def set_command_validity(is_valid, verbose=True):
     """Store whether the command is valid"""
     current_record["correct_command"] = is_valid
-    print(f"Evaluation tracker: Command valid: {is_valid}")
+    print(f"Evaluation tracker: Command valid: {is_valid}") if verbose else "No print"
 
 
-def set_params_validity(is_valid):
+def set_params_validity(is_valid, verbose=True):
     """Store whether the parameters are valid"""
     current_record["correct_params"] = is_valid
-    print(f"Evaluation tracker: Parameters valid: {is_valid}")
+    (
+        print(f"Evaluation tracker: Parameters valid: {is_valid}")
+        if verbose
+        else "No print"
+    )
 
 
-def finalize_record():
+def finalize_record(verbose=True):
     """Finalize the current record and prepare for a new one"""
-    print("Evaluation tracker: Finalizing record...")
+    print("Evaluation tracker: Finalizing record...") if verbose else "No print"
 
     # Only add complete records
     if (
@@ -68,15 +80,27 @@ def finalize_record():
     ):
 
         evaluation_records.append(current_record.copy())
-        print(
-            f"Evaluation tracker: Added record to batch (total: {len(evaluation_records)})"
+        (
+            print(
+                f"Evaluation tracker: Added record to batch (total: {len(evaluation_records)})"
+            )
+            if verbose
+            else "No print"
         )
 
         # Save to file with each finalization
         filepath = save_records()
-        print(f"Evaluation tracker: Saved records to {filepath}")
+        (
+            print(f"Evaluation tracker: Saved records to {filepath}")
+            if verbose
+            else "No print"
+        )
     else:
-        print("Evaluation tracker: Incomplete record, not saving")
+        (
+            print("Evaluation tracker: Incomplete record, not saving")
+            if verbose
+            else "No print"
+        )
         missing = []
         if current_record["user_input"] is None:
             missing.append("user_input")
@@ -84,13 +108,17 @@ def finalize_record():
             missing.append("model_output")
         if current_record["correct_command"] is None:
             missing.append("correct_command")
-        print(f"Evaluation tracker: Missing fields: {', '.join(missing)}")
+        (
+            print(f"Evaluation tracker: Missing fields: {', '.join(missing)}")
+            if verbose
+            else "No print"
+        )
 
     # Reset for next record
     reset_record()
 
 
-def save_records(filepath="evaluation_results.json"):
+def save_records(filepath="evaluation_results.json", verbose=True):
     """Save all evaluation records to a JSON file"""
     # Use absolute path for clarity - save in the project root
     if not os.path.isabs(filepath):
@@ -100,7 +128,13 @@ def save_records(filepath="evaluation_results.json"):
         )
         filepath = os.path.join(project_root, filepath)
 
-    print(f"Evaluation tracker: Saving {len(evaluation_records)} records to {filepath}")
+    (
+        print(
+            f"Evaluation tracker: Saving {len(evaluation_records)} records to {filepath}"
+        )
+        if verbose
+        else "No print"
+    )
 
     # Create parent directory only if filepath has a parent directory
     parent_dir = os.path.dirname(filepath)
@@ -113,11 +147,19 @@ def save_records(filepath="evaluation_results.json"):
         try:
             with open(filepath, "r") as f:
                 existing_records = json.load(f)
-            print(
-                f"Evaluation tracker: Loaded {len(existing_records)} existing records"
+            (
+                print(
+                    f"Evaluation tracker: Loaded {len(existing_records)} existing records"
+                )
+                if verbose
+                else "No print"
             )
         except (json.JSONDecodeError, FileNotFoundError) as e:
-            print(f"Evaluation tracker: Error loading existing records: {e}")
+            (
+                print(f"Evaluation tracker: Error loading existing records: {e}")
+                if verbose
+                else "No print"
+            )
             existing_records = []
 
     # Combine with new records
@@ -127,7 +169,11 @@ def save_records(filepath="evaluation_results.json"):
     with open(filepath, "w") as f:
         json.dump(all_records, f, indent=2)
 
-    print(f"Evaluation tracker: Successfully saved {len(all_records)} records")
+    (
+        print(f"Evaluation tracker: Successfully saved {len(all_records)} records")
+        if verbose
+        else "No print"
+    )
 
     # Clear processed records
     evaluation_records.clear()

@@ -28,11 +28,15 @@ if 0.0 > TEMPERATURE or TEMPERATURE > 1.0:
 with open(SYSTEM_MESSAGE_FILE, "r", encoding="utf-8") as f:
     system_message = f.read()
 
-MANIPULATION_CSV = "./tests/data/manipulation.psv"
+TEST_CASES_PSV = "./tests/data/test_cases.psv"
 TEST_REPORT_FILE = "./test_report.json"
 
-with open(MANIPULATION_CSV) as f:
-    ALL_TEST_CASES = [i.split("|") for i in f.readlines()[1:] if len(i.strip()) > 0]
+with open(TEST_CASES_PSV) as f:
+    ALL_TEST_CASES = [
+        i.split("|")
+        for i in f.readlines()[1:]
+        if len(i.strip()) > 0 and i.strip()[0] != ";"
+    ]
 
 
 def _get_command_test_cases(command):
@@ -77,7 +81,7 @@ class TestRoboCRAM(unittest.TestCase):
             return False
 
     @staticmethod
-    def _manupulation_test_helper(
+    def _test_helper(
         functionality_being_tested,
         test_cases,
         similarity_threshold=100,
@@ -224,40 +228,31 @@ class TestRoboCRAM(unittest.TestCase):
                 }
             )
 
-    def test_move_robot(self):
+    def test_manipulation(self):
         """
-        Can the robot move within its environment?
+        Can the robot reliably perform manipulation and movements within its environment?
         """
-        TestRoboCRAM._manupulation_test_helper(
-            "Can the robot move within its environment?",
-            _get_command_test_cases("move_robot"),
+        TestRoboCRAM._test_helper(
+            "Can the robot reliably perform manipulation and movements within its environment?",
+            _get_command_test_cases("manipulation"),
         )
 
-    def test_move_and_rotate_robot(self):
+    def test_perception(self):
         """
-        Can the robot move and rotate within its environment?
+        Can the robot reliably perceive objects within its environment?
         """
-        TestRoboCRAM._manupulation_test_helper(
-            "Can the robot move and rotate within its environment?",
-            _get_command_test_cases("move_and_rotate"),
+        TestRoboCRAM._test_helper(
+            "Can the robot reliably perceive objects within its environment?",
+            _get_command_test_cases("perception"),
         )
 
-    def test_pick_and_place(self):
+    def test_environment_understanding(self):
         """
-        Can the robot pick an object and place it at a specific coordinate?
+        Can the robot reliably understand its environment?
         """
-        TestRoboCRAM._manupulation_test_helper(
-            "Can the robot pick an object and place it at a specific coordinate?",
-            _get_command_test_cases("pickup_and_place"),
-        )
-
-    def test_pick_and_place_on_surface(self):
-        """
-        Can the robot pick an object and place it on a specific surface?
-        """
-        TestRoboCRAM._manupulation_test_helper(
-            "Can the robot pick an object and place it on a specific surface?",
-            _get_command_test_cases("pick_and_place_on_surface"),
+        TestRoboCRAM._test_helper(
+            "Can the robot reliably understand its environment?",
+            _get_command_test_cases("environment"),
         )
 
 
