@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -20,7 +19,7 @@ LOGGER_NAME = os.getenv("LOGGER_NAME").lower()
 PYCRAM_API_HOST = os.getenv("PYCRAM_API_HOST")
 SYSTEM_MESSAGE_FILE = os.getenv("SYSTEM_MESSAGE_FILE")
 REQUESTS_TIMEOUT = int(os.getenv("REQUESTS_TIMEOUT"))
-RAG_DOCS_DIRECTORY = "docs/"#os.getenv("RAG_DOCS_DIRECTORY", "docs/")
+RAG_DOCS_DIRECTORY = "docs/"  # os.getenv("RAG_DOCS_DIRECTORY", "docs/")
 
 
 logger = logging.getLogger(LOGGER_NAME)
