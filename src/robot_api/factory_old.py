@@ -44,10 +44,14 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         offset_y: float = None,
         **kwargs,
     ):
-        print("\n==== ROBOT API TOOL CALLED ====")
-        print(f"Command: {command}")
-        print(
-            f"Parameters: {', '.join([f'{k}={v}' for k, v in locals().items() if k != 'command' and k != 'kwargs' and v is not None])}"
+        print("\n==== ROBOT API TOOL CALLED ====") if not skip_execution else "No print"
+        print(f"Command: {command}") if not skip_execution else "No print"
+        (
+            print(
+                f"Parameters: {', '.join([f'{k}={v}' for k, v in locals().items() if k != 'command' and k != 'kwargs' and v is not None])}"
+            )
+            if not skip_execution
+            else "No print"
         )
 
         # Collect non-None parameters
@@ -75,17 +79,21 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         params.update(kwargs)
 
         # Track the model output for evaluation
-        set_model_output(command, params)
-        print("Model output recorded in evaluation tracker")
+        set_model_output(command, params, verbose=not skip_execution)
+        (
+            print("Model output recorded in evaluation tracker")
+            if not skip_execution
+            else "No print"
+        )
 
         # Call the API class
         print(f"Calling robot_api.execute_command with command={command}")
         result = robot_api.execute_command(command=command, **params)
 
         # Finalize the evaluation record
-        print("Finalizing evaluation record")
-        finalize_record()
-        print("Evaluation record finalized")
+        print("Finalizing evaluation record") if not skip_execution else "No print"
+        finalize_record(verbose=not skip_execution)
+        print("Evaluation record finalized") if not skip_execution else "No print"
 
         return result
 
