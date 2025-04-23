@@ -109,7 +109,7 @@ class Agent:
         print("=====================================")
         print("Processing new input message...")
         print(f"Received message: {message_text}")
-        
+
         # Record the user input for evaluation
         set_user_input(message_text)
 

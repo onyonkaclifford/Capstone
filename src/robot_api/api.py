@@ -67,7 +67,7 @@ class RobotAPI:
         # Validate parameters
         valid, error_msg = handler.validate_params(params)
         set_params_validity(valid)
-        
+
         if not valid:
             return f"ERROR we have the error here: {error_msg}"
 

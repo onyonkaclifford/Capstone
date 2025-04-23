@@ -6,7 +6,7 @@ from langchain.tools import StructuredTool
 
 from .api import RobotAPI
 from .api_no_exec import RobotAPINoExec
-from .evaluation_tracker import set_model_output, finalize_record
+from .evaluation_tracker import finalize_record, set_model_output
 
 
 def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: bool):
@@ -51,10 +51,12 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         name: str = None,
         **kwargs,
     ):
-        print(f"\n==== ROBOT API TOOL CALLED ====")
+        print("\n==== ROBOT API TOOL CALLED ====")
         print(f"Command: {command}")
-        print(f"Parameters: {', '.join([f'{k}={v}' for k, v in locals().items() if k != 'command' and k != 'kwargs' and v is not None])}")
-        
+        print(
+            f"Parameters: {', '.join([f'{k}={v}' for k, v in locals().items() if k != 'command' and k != 'kwargs' and v is not None])}"
+        )
+
         # Collect non-None parameters
         params = {}
         locals_dict = locals()
@@ -69,16 +71,16 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
             "offset_x",
             "offset_y",
             "exclude_types",
-            "obj_type", 
+            "obj_type",
             "area",
-            "name"
+            "name",
         ]:
             if param in locals_dict and locals_dict[param] is not None:
                 params[param] = locals_dict[param]
 
         # Add any additional kwargs
         params.update(kwargs)
-        
+
         # Track the model output for evaluation
         set_model_output(command, params)
         print("Model output recorded in evaluation tracker")
@@ -86,12 +88,12 @@ def create_robot_api_tool(pycram_api_host, requests_timeout, skip_execution: boo
         # Call the API class
         print(f"Calling robot_api.execute_command with command={command}")
         result = robot_api.execute_command(command=command, **params)
-        
+
         # Finalize the evaluation record
         print("Finalizing evaluation record")
         finalize_record()
         print("Evaluation record finalized")
-        
+
         return result
 
     # Read the tool description from the txt file

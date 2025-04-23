@@ -137,20 +137,20 @@ class SpawnInAreaHandler(RobotCommandHandler):
         valid, error_msg = super().validate_params(params)
         if not valid:
             return False, error_msg
-        
+
         # Handle offset_x and offset_y
         if "offset_x" in params:
             try:
                 params["offset_x"] = float(params["offset_x"])
             except (ValueError, TypeError):
                 return False, "offset_x must be a numeric value"
-                
+
         if "offset_y" in params:
             try:
                 params["offset_y"] = float(params["offset_y"])
             except (ValueError, TypeError):
                 return False, "offset_y must be a numeric value"
-                
+
         return True, None
 
     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -158,20 +158,20 @@ class SpawnInAreaHandler(RobotCommandHandler):
             "object_choice": params["object_choice"],
             "surface_name": params["surface_name"],
         }
-        
+
         # Add optional parameters if provided
         if "offset_x" in params:
             api_params["offset_x"] = params["offset_x"]
-            
+
         if "offset_y" in params:
             api_params["offset_y"] = params["offset_y"]
-            
+
         if "color" in params:
             api_params["color"] = params["color"]
-            
+
         if "name" in params:
             api_params["name"] = params["name"]
-            
+
         return {"command": "spawn_in_area", "params": api_params}
 
 
@@ -190,17 +190,17 @@ class PickAndPlaceOnSurfaceHandler(RobotCommandHandler):
                 params["offset_x"] = float(params["offset_x"])
             except (ValueError, TypeError):
                 return False, "offset_x must be a numeric value"
-                
+
         if "offset_y" in params:
             try:
                 params["offset_y"] = float(params["offset_y"])
             except (ValueError, TypeError):
                 return False, "offset_y must be a numeric value"
-                
+
         # Validate 'arm' if provided
         if "arm" in params and params["arm"] not in ["left", "right"]:
             return False, "arm must be 'left' or 'right'"
-            
+
         return True, None
 
     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -208,22 +208,23 @@ class PickAndPlaceOnSurfaceHandler(RobotCommandHandler):
             "object_name": params["object_name"],
             "surface_name": params["surface_name"],
         }
-        
+
         # Add optional parameters if provided
         if "offset_x" in params:
             api_params["offset_x"] = params["offset_x"]
-            
+
         if "offset_y" in params:
             api_params["offset_y"] = params["offset_y"]
-            
+
         if "arm" in params:
             api_params["arm"] = params["arm"]
-            
+
         return {"command": "pick_and_place_on_surface", "params": api_params}
+
 
 class GetWorldObjectsHandler(RobotCommandHandler):
     """Handler for retrieving objects in the world with optional filtering"""
-    
+
     def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         # Validate exclude_types if provided
         if "exclude_types" in params:
@@ -232,82 +233,89 @@ class GetWorldObjectsHandler(RobotCommandHandler):
                 try:
                     # Try to convert from string representation to a list
                     import ast
+
                     params["exclude_types"] = ast.literal_eval(params["exclude_types"])
-                except:
+                except Exception:
                     return False, "exclude_types must be a valid list of strings"
-            
+
             if not isinstance(params["exclude_types"], list):
                 return False, "exclude_types must be a list of strings"
-            
+
         # Validate obj_type if provided
         if "obj_type" in params and not isinstance(params["obj_type"], str):
             return False, "obj_type must be a string"
-            
+
         # Validate area if provided
         if "area" in params and not isinstance(params["area"], str):
             return False, "area must be a string"
-            
+
         return True, None
-        
+
     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Initialize with default exclusions
         api_params = {
-            "exclude_types": ["floor", "wall", "ceiling", "ground", "kitchen", "apartment", "pr2"]
+            "exclude_types": [
+                "floor",
+                "wall",
+                "ceiling",
+                "ground",
+                "kitchen",
+                "apartment",
+                "pr2",
+            ]
         }
-        
+
         # Override defaults if explicitly provided in params
         if "exclude_types" in params:
             api_params["exclude_types"] = params["exclude_types"]
-            
+
         if "obj_type" in params:
             api_params["obj_type"] = params["obj_type"]
-            
+
         if "area" in params:
             api_params["area"] = params["area"]
-            
+
         # # Log the execution for debugging
         # if os.environ.get("VERBOSE", "False").lower() == "true":
         #     print(f"GetWorldObjectsHandler executing with params: {api_params}")
-            
-        return {
-            "command": "get_world_objects",
-            "params": api_params
-        }
+
+        return {"command": "get_world_objects", "params": api_params}
+
 
 # class GetWorldObjectsHandler(RobotCommandHandler):
 #     """Handler for retrieving objects in the world with optional filtering"""
-    
+
 #     def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
 #         # Validate exclude_types if provided
 #         if "exclude_types" in params and not isinstance(params["exclude_types"], list):
 #             return False, "exclude_types must be a list of strings"
-            
+
 #         # Validate obj_type if provided
 #         if "obj_type" in params and not isinstance(params["obj_type"], str):
 #             return False, "obj_type must be a string"
-            
+
 #         # Validate area if provided
 #         if "area" in params and not isinstance(params["area"], str):
 #             return False, "area must be a string"
-            
+
 #         return True, None
-    
+
 #     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
 #         # Initialize with default exclusions
 #         api_params = {
 #             "exclude_types": ["floor", "wall", "ceiling", "ground", "kitchen", "apartment", "pr2"]
 #         }
-        
+
 #         # Override defaults if explicitly provided in params
 #         if "exclude_types" in params:
 #             api_params["exclude_types"] = params["exclude_types"]
-            
+
 #         if "obj_type" in params:
 #             api_params["obj_type"] = params["obj_type"]
-            
+
 #         if "area" in params:
 #             api_params["area"] = params["area"]
-            
+
 #         return {
 #             "command": "get_world_objects",
 #             "params": api_params
@@ -322,11 +330,11 @@ class ListRobotCommandsHandler(RobotCommandHandler):
 # Handler mapping for all robot commands - LEANER VERSION
 handler_mapping = {
     "move_robot": MoveRobotHandler(),
-    "pickup_and_place": PickupAndPlaceHandler(),   
+    "pickup_and_place": PickupAndPlaceHandler(),
     "spawn_objects": SpawnObjectsHandler(),
-    "spawn_in_area": SpawnInAreaHandler(),      
+    "spawn_in_area": SpawnInAreaHandler(),
     "get_placement_surfaces": GetPlacementSurfacesHandler(),
-    "pick_and_place_on_surface": PickAndPlaceOnSurfaceHandler(),    
+    "pick_and_place_on_surface": PickAndPlaceOnSurfaceHandler(),
     "get_world_objects": GetWorldObjectsHandler(),
     "list_robot_commands": ListRobotCommandsHandler(),
 }
