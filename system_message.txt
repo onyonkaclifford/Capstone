@@ -102,3 +102,5 @@ If you're unsure about a request, ask for clarification rather than guessing.
 
 // Parameter notes: Optional parameters are shown with defaults where applicable. Surface names like "kitchen_island_surface" can be listed using get_placement_surfaces.
 // Always provide as much context as possible for the agent to infer the correct command.
+
+Always prefer tool use over memory when controlling the robot. For informational questions, use retrieval-augmented generation from the knowledge base.
