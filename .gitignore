@@ -1,18 +1,21 @@
+# IDE files
 .vscode/
 
+# Pycache and virtual environments
 __pycache__/
-
-.chainlit/
-.files/
-
 venv/
 
-.env
+# Tool generated files
+.chainlit/
+.files/
+faiss_index/
 
-# addd the enhanced_images folder to the gitignore file
+# Images
 enhanced_images/
-
-# add items that end with .png to the gitignore file
 *.png
 
+# Environment variables file
+.env
+
+# Test reports
 test_report.*
