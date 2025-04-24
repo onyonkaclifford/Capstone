@@ -1,28 +1,33 @@
 command | user_input | expected_response | asserts
+; comments are delinated by starting a line with a semi-colon, and are therefore skipped and not executed
 
 ; move robot
-manipulation | move | Specify the coordinates you would like the robot to move to | coordinates
 manipulation | move the robot to 1, 2, 3 | {"command": "move_robot", "params": {"coordinates": [1, 2, 3]}} |
 manipulation | move to origin | {"command": "move_robot", "params": {"coordinates": [0, 0, 0]}} |
+manipulation | move to coordinate 1.0, 1.0, 0.0 | {"command": "move_robot", "params": {"coordinates": [1.0, 1.0, 0.0]}} |
+manipulation | move robot to 0,1,0 | {"command": "move_robot", "params": {"coordinates": [0, 1, 0]}} |
 
 ; pick and place at a coordinate
-manipulation | pick the bottle of milk | Specify the location to place the bottle of milk at and the arm to use in picking it up | location, arm
-manipulation | pick the bottle of milk and place it at 1 | Specify the three values of the location coordinates to place the bottle of milk at and the arm to use | location
-manipulation | pick the bottle of milk and place it at 1, 2, 3 | {"command": "pickup_and_place", "params": {"object_name": "milk", "target_location": [1, 2, 3]}} |
-manipulation | pick and place the bottle of milk at 1, 2, 3 | {"command": "pickup_and_place", "params": {"object_name": "milk", "target_location": [1, 2, 3]}} |
+manipulation | pick up and place the bottle of milk at 1 | Specify the three values of the location coordinates to place the bottle of milk at and the arm to use | coordinates
+manipulation | pick up and place the bottle of milk at 1, 2, 3 | {"command": "pickup_and_place", "params": {"object_name": "milk", "target_location": [1, 2, 3]}} |
+manipulation | pick up cereal and place at -1.0675,1.7192,0.95 | {"command": "pickup_and_place", "params": {"object_name": "cereal", "target_location": [-1.0675, 1.7192, 0.95]}} |
 
 ; pick and place on a surface
-manipulation | pick it up and place it on the sink | Specify the name of the object to pick up | object
-manipulation | pick the bottle of milk using the right arm and place it on the sink at x offset 0.1 and y 0.2 offset | {"command": "pick_and_place_on_surface", "params": {"object_name": "milk", "surface_name": "sink", "offset_x": 0.1, "offset_y": 0.2, "arm": "right"}} |
+manipulation | pick the bottle of milk using the right arm and place it on the sink at x offset 0.1 and y 0.2 offset | {"command": "pick_and_place_on_surface", "params": {"object_name": "milk", "surface_name": "sink_area_surface", "offset_x": 0.1, "offset_y": 0.2, "arm": "right"}} |
+manipulation | pick cereal1 and place on kitchen island | {"command": "pick_and_place_on_surface", "params": {"object_name": "cereal1", "surface_name": "kitchen_island_surface"}} |
 
-; get world objects
-perception | what items are in the environment? | {"command": "get_world_objects", "params": {"exclude_types": [], "obj_type": "", "area": ""}} |
+; look at object
+perception | look at | Specify the object to look at | object
+perception | look at object cereal | {"command": "look_at_object", "params": {"obj_type": "cereal"}} |
+perception | look at object milk | {"command": "look_at_object", "params": {"obj_type": "milk"}} |
+
+; get objects in the world
+perception | get objects | Specify the command to use | command
+perception | get all world objects | {"command": "get_world_objects", "params": {}} |
 
 ; spawn objects
-environment | create a grren cereal called cereal1 at position 1.4, 1, 0.95 | {"command": "spawn_objects", "params": {"object_choice": "cereal", "coordinates": [1.4, 1, 0.95], "color": "green", "name": "cereal1"}} |
-
-; spawn in area
-environment | create a green cereal called cereal1 on the kitchen island, giving it an x offset of 0.2 and y offset of -0.1 | {"command": "spawn_in_area", "params": {"object_choice": "cereal", "surface_name": "kitchen_island_surface", "color": "green", "name": "cereal1", "offset_x": 0.2, "offset_y": -0.1}} |
+environment | spawn a green cereal called cereal1 at position 1.4, 1, 0.95 | {"command": "spawn_objects", "params": {"object_choice": "cereal", "coordinates": [1.4, 1, 0.95], "color": "green"}} |
+environment | spawn this item | Specify the item to spawn | item
 
 ; get placement surfaces
 environment | what are the places that I can place an item? | {"command": "get_placement_surfaces", "params": {}} |
