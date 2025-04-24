@@ -17,13 +17,17 @@ manipulation | pick the bottle of milk using the right arm and place it on the s
 manipulation | pick cereal1 and place on kitchen island | {"command": "pick_and_place_on_surface", "params": {"object_name": "cereal1", "surface_name": "kitchen_island_surface"}} |
 
 ; look at object
+perception | look at | Specify the object to look at | object
 perception | look at object cereal | {"command": "look_at_object", "params": {"obj_type": "cereal"}} |
-
-; spawn objects
-environment | create a green cereal called cereal1 at position 1.4, 1, 0.95 | {"command": "spawn_objects", "params": {"object_choice": "cereal", "coordinates": [1.4, 1, 0.95], "color": "green"}} |
+perception | look at object milk | {"command": "look_at_object", "params": {"obj_type": "milk"}} |
 
 ; get objects in the world
-environment | get all world objects | {"command": "get_world_objects", "params": {}} |
+perception | get objects | Specify the command to use | command
+perception | get all world objects | {"command": "get_world_objects", "params": {}} |
+
+; spawn objects
+environment | spawn a green cereal called cereal1 at position 1.4, 1, 0.95 | {"command": "spawn_objects", "params": {"object_choice": "cereal", "coordinates": [1.4, 1, 0.95], "color": "green"}} |
+environment | spawn this item | Specify the item to spawn | item
 
 ; get placement surfaces
 environment | what are the places that I can place an item? | {"command": "get_placement_surfaces", "params": {}} |
